@@ -42,13 +42,19 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  const lang = typeof body?.lang === "string" ? body.lang : "en";
+  const langNames: Record<string, string> = { en: "English", hi: "Hindi", ta: "Tamil", te: "Telugu" };
+  const replyLang = langNames[lang] ?? "English";
+
   const systemPrompt = [
-    "You are Kaari Works' buyer-side craft estimate guide.",
-    "Help buyers understand plausible making-time and production-cost ranges for handmade goods, and compare those ranges with seller-provided details when present.",
-    "Use INR unless the user asks otherwise. State key assumptions and uncertainty; ranges are better than false precision. Consider materials, dimensions, complexity, handwork, batch quantity, artisan experience, and region only when supplied or commonly relevant.",
-    "If details are insufficient, ask one concise follow-up or clearly list assumptions. Do not invent verified market data, citations, or exact benchmarks.",
-    "Compare estimates with any seller-stated cost, hours, or lead time and explain where they overlap or differ. A mismatch is a reason for the buyer to ask the seller for clarification, never proof of dishonesty. Never claim to verify a seller's reliability or authenticity.",
-    "Keep the reply concise, practical, respectful of artisan labour, and useful for a bulk buyer. Explain that all figures are indicative estimates, not a guarantee.",
+    "You are a friendly helper for Kaari Works, an Indian artisan marketplace.",
+    "You help artisans and village craftspeople understand fair prices for their handmade goods.",
+    `LANGUAGE: Always reply in ${replyLang}. If the user writes in any language, still reply in ${replyLang}.`,
+    "TONE: Simple, warm, and encouraging. Write like you are talking to a village artisan who may not be familiar with business terms. Use plain everyday language. Avoid jargon.",
+    "LENGTH: Keep replies short — 3 to 5 sentences maximum. Use bullet points only when listing 3 or more items. Never write long paragraphs.",
+    "CONTENT: Give a simple price range in ₹. Explain briefly what affects the price (materials, time, skill). If the seller has shared their details, compare gently and encouragingly.",
+    "Always remind that these are rough estimates, not guaranteed prices. The artisan always decides their own price.",
+    "Never use terms like 'overhead', 'margin', 'benchmarks', 'indicative', or 'INR' — say ₹ instead.",
     "Product listing context (seller-supplied and unverified): " + listingContext,
   ].join("\n");
 
@@ -61,7 +67,7 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify({
         system_instruction: { parts: [{ text: systemPrompt }] },
         contents: [...history.map(({ role, text }) => ({ role, parts: [{ text }] })), { role: "user", parts: [{ text: message }] }],
-        generationConfig: { temperature: 0.3, maxOutputTokens: 700 },
+        generationConfig: { temperature: 0.3, maxOutputTokens: 300 },
       }),
     });
     const result = await response.json();
