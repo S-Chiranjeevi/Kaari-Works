@@ -30,4 +30,4 @@ Install Flutter and follow [`mobile/README.md`](mobile/README.md) to generate An
 
 ## Remaining integrations
 
-Gemini image enhancement is wired into the website's artisan listing flow and requires a new server-side `GEMINI_API_KEY`. Seller pricing suggestions recalculate from entered making cost, time, and craft experience; they are cost-based estimates rather than a live market-price feed. Gemini translation, production-grade object storage, notifications, and deployment configuration remain future work.
+Gemini image enhancement is wired into the website's artisan listing flow, and the floating buyer guide estimates product cost and making time against seller-provided listing details. Both require a new server-side `GEMINI_API_KEY`. Seller price suggestions recalculate from entered making cost, time, and craft experience; they are cost-based estimates rather than a live market-price feed. Gemini translation, production-grade object storage, notifications, and deployment configuration remain future work.
