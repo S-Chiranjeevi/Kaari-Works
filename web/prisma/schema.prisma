@@ -1,0 +1,69 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model UserProfile {
+  clerkUserId String    @id @map("clerk_user_id") @db.VarChar(128)
+  displayName String?   @map("display_name") @db.VarChar(160)
+  email       String?   @db.VarChar(320)
+  role        String    @default("buyer") @db.VarChar(20)
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  products    Product[]
+  inquiriesAsBuyer Inquiry[] @relation("BuyerInquiries")
+  inquiriesAsSeller Inquiry[] @relation("SellerInquiries")
+
+  @@map("user_profiles")
+}
+
+model Product {
+  id                   Int       @id @default(autoincrement())
+  sellerId             String    @map("seller_id") @db.VarChar(128)
+  seller               UserProfile @relation(fields: [sellerId], references: [clerkUserId], onDelete: Cascade)
+  name                 String    @db.VarChar(180)
+  category             String    @db.VarChar(100)
+  description          String    @default("") @db.Text
+  materials            String?   @db.VarChar(300)
+  priceInr             Int       @map("price_inr")
+  makingCostInr        Int?      @map("making_cost_inr")
+  hoursToMake          Float?    @map("hours_to_make")
+  craftExperienceYears Int?      @map("craft_experience_years")
+  quantityAvailable    Int       @default(1) @map("quantity_available")
+  minimumOrderQuantity Int       @default(1) @map("minimum_order_quantity")
+  leadTime             String?   @map("lead_time") @db.VarChar(120)
+  imageUrl             String?   @map("image_url") @db.Text
+  status               String    @default("published") @db.VarChar(20)
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+  inquiries            Inquiry[]
+
+  @@index([status, createdAt])
+  @@index([category])
+  @@map("products")
+}
+
+model Inquiry {
+  id         Int         @id @default(autoincrement())
+  productId  Int         @map("product_id")
+  product    Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  buyerId    String      @map("buyer_id") @db.VarChar(128)
+  buyer      UserProfile @relation("BuyerInquiries", fields: [buyerId], references: [clerkUserId], onDelete: Cascade)
+  sellerId   String      @map("seller_id") @db.VarChar(128)
+  seller     UserProfile @relation("SellerInquiries", fields: [sellerId], references: [clerkUserId], onDelete: Cascade)
+  quantity   Int         @default(1)
+  message    String      @db.Text
+  status     String      @default("open") @db.VarChar(20)
+  sellerReply String?    @map("seller_reply") @db.Text
+  createdAt  DateTime    @default(now()) @map("created_at")
+  repliedAt  DateTime?   @map("replied_at")
+
+  @@index([buyerId, createdAt])
+  @@index([sellerId, createdAt])
+  @@map("inquiries")
+}

@@ -1,37 +1,33 @@
 # Kaari Works
 
-An artisan marketplace that helps makers present handmade products and connect directly with buyers, including wholesale and bulk buyers.
+Marketplace where independent artisans publish handmade products and buyers contact sellers directly for single items or bulk orders.
 
-## Current app
+## Current implementation
 
-- Responsive web marketplace for artisan sellers and product discovery.
-- Seller dashboard and catalogue, plus listing creation with price, making cost, time, experience, minimum order quantity, and lead time.
-- Buyer search, bulk quote requests, and seller contact.
-- Clerk sign-in/account creation UI, with Google enabled through Clerk's social connection settings.
-- FastAPI backend with PostgreSQL persistence for profiles, products, and buyer/seller enquiries.
-- Clerk session JWT verification on protected API routes.
+- [`web/`](web/) is the fresh Next.js/React/TypeScript website and API, using Clerk for accounts and PostgreSQL through Prisma.
+- [`mobile/`](mobile/) is a Flutter client for Android and iOS. It shares the Next.js API and Clerk accounts with the website.
+- [`backend/`](backend/) and the root `index.html` are the earlier FastAPI/static prototype. The new web/mobile setup does not use that backend.
 
-## Run locally
+The reference repo informed the technology choices and configuration pattern only. Kaari Works has its own new environment variables; no keys from that repository were copied. Put new Clerk, Gemini, and database credentials in `web/.env.local` and never commit them.
 
-1. Install Python 3.11+ and Docker Desktop.
-2. Copy `backend/.env.example` to `backend/.env` and configure Clerk keys, issuer, JWKS URL, and allowed origin.
-3. Start the database from `backend/` with `docker compose up -d db`.
-4. Install backend dependencies and run the API from `backend/`:
+## Start the new website/API
 
-   ```powershell
-   py -m venv .venv
-   .\.venv\Scripts\Activate.ps1
-   pip install -r requirements.txt
-   uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
-   ```
+Follow [`web/README.md`](web/README.md). In short, configure PostgreSQL and new Clerk keys in `web/.env.local`, then run:
 
-5. Open <http://localhost:8000>. API documentation is at <http://localhost:8000/docs>.
+```powershell
+cd web
+npm install
+npm run db:generate
+npm run db:push
+npm run dev
+```
 
-See [backend/README.md](backend/README.md) for Clerk/Google setup and API details. Never commit `.env` or expose `CLERK_SECRET_KEY` in browser code.
+The site runs at <http://localhost:3000>. The API includes public product search, seller listing creation, buyer enquiries, an enquiry inbox, and seller replies. API fields remain compatible with the Flutter app.
 
-## Next implementation steps
+## Start the mobile app
 
-- Add image uploads/object storage and connect Gemini photo enhancement and listing translation.
-- Replace illustrative price bands with verified market data and explainable regional pricing.
-- Add database migrations, automated checks, deployment configuration, and buyer/seller notifications before launch.
+Install Flutter and follow [`mobile/README.md`](mobile/README.md) to generate Android/iOS runner projects, configure Clerk Native API and Google OAuth as needed, and run on an emulator or device.
 
+## Remaining integrations
+
+Gemini image enhancement is wired into the website's artisan listing flow and requires a new server-side `GEMINI_API_KEY`. Seller pricing suggestions recalculate from entered making cost, time, and craft experience; they are cost-based estimates rather than a live market-price feed. Gemini translation, production-grade object storage, notifications, and deployment configuration remain future work.

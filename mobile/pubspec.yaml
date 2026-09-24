@@ -1,0 +1,23 @@
+name: kaari_works_mobile
+description: Kaari Works artisan and bulk buyer marketplace mobile app.
+publish_to: none
+version: 0.1.0+1
+
+environment:
+  sdk: '>=3.6.2 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  clerk_flutter: ^0.0.18-beta
+  http: ^1.2.2
+  google_sign_in: ^7.1.1
+  uuid: ^4.6.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
