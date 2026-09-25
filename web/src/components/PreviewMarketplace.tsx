@@ -206,19 +206,26 @@ function PreviewMarketplaceInner() {
         </div>
         <div className="featured-scroll">
           {[
-            { name: "Sita Devi",    product: "Madhubani Story Panel",        region: "Madhubani, Bihar",  price: 1200, icon: "🎨", color: "#f5e2cf" },
-            { name: "Razia Khatri", product: "Ajrakh Cotton Table Runner",    region: "Kutch, Gujarat",    price: 980,  icon: "🧵", color: "#ead9d5" },
-            { name: "Imran Khan",   product: "Blue Pottery Serving Bowl",     region: "Jaipur, Rajasthan", price: 1450, icon: "🏺", color: "#dce9ef" },
-            { name: "Lakshmi SHG",  product: "Handwoven Market Basket",       region: "Kerala",            price: 850,  icon: "🧺", color: "#eee1c9" },
-            { name: "Ravi Kumar",   product: "Carved Teak Desk Tray",         region: "Saharanpur, UP",    price: 1750, icon: "🪵", color: "#ead7bd" },
+            { name: "Sita Devi",    product: "Madhubani Story Panel",        craft: "Paintings",          region: "Madhubani, Bihar",  price: 1200, icon: "🎨", color: "#f5e2cf" },
+            { name: "Razia Khatri", product: "Ajrakh Cotton Table Runner",    craft: "Textiles",           region: "Kutch, Gujarat",    price: 980,  icon: "🧵", color: "#ead9d5" },
+            { name: "Imran Khan",   product: "Blue Pottery Serving Bowl",     craft: "Pottery & ceramics", region: "Jaipur, Rajasthan", price: 1450, icon: "🏺", color: "#dce9ef" },
+            { name: "Lakshmi SHG",  product: "Handwoven Market Basket",       craft: "Baskets",            region: "Kerala",            price: 850,  icon: "🧺", color: "#eee1c9" },
+            { name: "Ravi Kumar",   product: "Carved Teak Desk Tray",         craft: "Woodwork",           region: "Saharanpur, UP",    price: 1750, icon: "🪵", color: "#ead7bd" },
           ].map((a) => (
             <article className="featured-card" key={a.name} style={{background: a.color}}>
-              <div className="featured-icon">{a.icon}</div>
-              <div className="featured-info">
-                <strong>{a.product}</strong>
-                <span>{a.name}</span>
-                <span className="featured-region">{a.region}</span>
-                <span className="featured-price">₹{a.price.toLocaleString("en-IN")}</span>
+              <div className="featured-card-art">{a.icon}</div>
+              <div className="featured-card-body">
+                <span className="featured-card-category">{a.craft}</span>
+                <strong className="featured-card-name">{a.product}</strong>
+                <div className="featured-card-seller">{t("madeBy")} {a.name}</div>
+                <div className="featured-card-region">{a.region}</div>
+                <button className="button soft estimate-product-button" style={{fontSize:11,padding:"6px 10px",margin:"6px 0"}}
+                  onClick={() => window.dispatchEvent(new CustomEvent("kaari:estimate-product", { detail: { name: a.product, category: a.craft, description: "", price_inr: a.price } }))}>
+                  {t("estimateButton")}
+                </button>
+                <div className="featured-card-foot">
+                  <span className="featured-price">₹{a.price.toLocaleString("en-IN")}</span>
+                </div>
               </div>
             </article>
           ))}
