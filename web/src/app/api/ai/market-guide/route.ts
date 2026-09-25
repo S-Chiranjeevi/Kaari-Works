@@ -77,6 +77,30 @@ export async function POST(request: NextRequest) {
     });
     const result = await response.json();
     if (!response.ok) {
+      // If rate limited, retry once after the suggested wait time (capped at 30s)
+      if (response.status === 429) {
+        const retryMatch = result?.error?.message?.match(/retry in ([\d.]+)s/i);
+        const waitMs = Math.min((parseFloat(retryMatch?.[1] ?? "5") + 1) * 1000, 30_000);
+        await new Promise((r) => setTimeout(r, waitMs));
+        const retry = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
+          signal: AbortSignal.timeout(30_000),
+          body: JSON.stringify({
+            system_instruction: { parts: [{ text: systemPrompt }] },
+            contents: [...history.map(({ role, text }) => ({ role, parts: [{ text }] })), { role: "user", parts: [{ text: message }] }],
+            generationConfig: { temperature: 0.3, maxOutputTokens: 300 },
+          }),
+        });
+        const retryResult = await retry.json();
+        if (!retry.ok) {
+          return NextResponse.json({ detail: `The buyer guide is busy. Please try again in a moment.` }, { status: 503 });
+        }
+        const retryReply = retryResult.candidates?.[0]?.content?.parts?.map((part: { text?: string }) => part.text || "").join("").trim()
+          .replace(/\*\*(.*?)\*\*/g, "$1").replace(/\*(.*?)\*/g, "$1").replace(/^[\*\-]\s+/gm, "").replace(/^\d+\.\s+/gm, "").replace(/\n{3,}/g, "\n\n").trim();
+        if (!retryReply) return NextResponse.json({ detail: "Gemini returned an empty reply. Please try again." }, { status: 502 });
+        return NextResponse.json({ reply: retryReply });
+      }
       console.error("Gemini buyer guide failed", response.status, result?.error?.message);
       return NextResponse.json({ detail: `The buyer guide could not respond: ${result?.error?.message || "Check Gemini model access and try again."}` }, { status: 502 });
     }
