@@ -20,6 +20,7 @@ const clerkAppearance = {
     fontFamily: "inherit",
   },
   elements: {
+    // Sign-in / sign-up card
     card: "shadow-lg border border-[#e5ebe6]",
     headerTitle: "text-[#17322f] text-xl font-bold",
     headerSubtitle: "text-[#6d7e78] text-sm",
@@ -33,6 +34,15 @@ const clerkAppearance = {
     footerActionLink: "text-[#13866c] hover:text-[#0d6654] font-semibold",
     identityPreviewText: "text-[#17322f]",
     identityPreviewEditButton: "text-[#13866c]",
+    // UserButton popup/popover
+    userButtonPopoverCard: "bg-white shadow-xl border border-[#e5ebe6]",
+    userButtonPopoverActionButton: "text-[#17322f] hover:bg-[#f6faf6]",
+    userButtonPopoverActionButtonText: "text-[#17322f] font-medium",
+    userButtonPopoverActionButtonIcon: "text-[#17322f]",
+    userButtonPopoverFooter: "hidden",
+    userPreviewMainIdentifier: "text-[#17322f] font-semibold",
+    userPreviewSecondaryIdentifier: "text-[#6d7e78]",
+    userButtonPopoverMain: "bg-white",
   },
   layout: {
     logoPlacement: "inside" as const,
