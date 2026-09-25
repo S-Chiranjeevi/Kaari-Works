@@ -6,7 +6,9 @@ import { ArrowRight, HeartHandshake, Leaf, Menu, MessageCircle, Search, ShieldCh
 import BuyerEstimateChat from "@/components/BuyerEstimateChat";
 import { FairPriceGuide, ProductPhotoUpload } from "@/components/SellerListingControls";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import VoiceNav from "@/components/VoiceNav";
 import { LangProvider, useLang } from "@/lib/i18n";
+import { VoiceAction } from "@/lib/voiceCommands";
 
 type Product = {
   id: number; name: string; category: string; description: string; seller_name: string | null;
@@ -165,6 +167,22 @@ function MarketplaceInner() {
     cat.toLowerCase().includes("jewel") ? "💍" :
     cat.toLowerCase().includes("wood") ? "🪵" : "🧵";
 
+  function handleVoiceAction(action: VoiceAction) {
+    switch (action) {
+      case "nav:discover":      setTab("discover"); break;
+      case "nav:sell":          setTab("sell"); break;
+      case "nav:inquiries":     setTab("inquiries"); break;
+      case "nav:signin":        window.location.href = "/sign-in"; break;
+      case "nav:signup":        window.location.href = "/sign-up"; break;
+      case "chat:open":         window.dispatchEvent(new CustomEvent("kaari:voice-chat-open")); break;
+      case "chat:close":        window.dispatchEvent(new CustomEvent("kaari:voice-chat-close")); break;
+      case "scroll:top":        window.scrollTo({ top: 0, behavior: "smooth" }); break;
+      case "scroll:catalogue":  document.getElementById("catalogue")?.scrollIntoView({ behavior: "smooth" }); break;
+      case "search:focus":      document.querySelector<HTMLInputElement>(".search input")?.focus(); break;
+      case "help":              break; // feedback is spoken by VoiceNav itself
+    }
+  }
+
   return <div className="page-shell">
     <header className="site-header">
       <a href="#top" className="brand"><span className="brand-mark">✿</span><span>Kaari<span className="brand-accent">Works</span></span></a>
@@ -173,6 +191,7 @@ function MarketplaceInner() {
         <button className="nav-link" onClick={() => setTab("sell")}>{t("navArtisans")}</button>
         <button className="nav-link" onClick={() => setTab("inquiries")}>{t("navEnquiries")}</button>
         <LanguageSwitcher />
+        <VoiceNav onAction={handleVoiceAction} />
         <SignedOut>
           <SignInButton mode="redirect"><button className="button outline">{t("navSignIn")}</button></SignInButton>
           <SignUpButton mode="redirect"><button className="button">{t("navJoin")}</button></SignUpButton>

@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useRef, useState, useCallback } from "react";
 import { Bot, MessageCircle, Send, Volume2, VolumeX, X } from "lucide-react";
 import { useLang } from "@/lib/i18n";
+import { LANG_LOCALE } from "@/lib/voiceCommands";
 
 type Message = { role: "user" | "model"; text: string };
 type ListingContext = {
@@ -117,6 +118,17 @@ export default function BuyerEstimateChat() {
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lang]);
+
+  useEffect(() => {
+    const openChat  = () => setOpen(true);
+    const closeChat = () => setOpen(false);
+    window.addEventListener("kaari:voice-chat-open",  openChat);
+    window.addEventListener("kaari:voice-chat-close", closeChat);
+    return () => {
+      window.removeEventListener("kaari:voice-chat-open",  openChat);
+      window.removeEventListener("kaari:voice-chat-close", closeChat);
+    };
+  }, []);
 
   useEffect(() => {
     const selectProduct = (event: Event) => {

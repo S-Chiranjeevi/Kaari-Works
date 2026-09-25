@@ -5,7 +5,9 @@ import { ArrowRight, HeartHandshake, Leaf, Search, ShieldCheck } from "lucide-re
 import BuyerEstimateChat from "@/components/BuyerEstimateChat";
 import { FairPriceGuide, ProductPhotoUpload } from "@/components/SellerListingControls";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import VoiceNav from "@/components/VoiceNav";
 import { LangProvider, useLang } from "@/lib/i18n";
+import { VoiceAction } from "@/lib/voiceCommands";
 
 const sampleProducts = [
   { name: "Madhubani Story Panel",     category: "Paintings",          seller: "Sita Devi · Madhubani, Bihar",          price: 1200, minimum: 10, icon: "🎨", color: "#f5e2cf", description: "Hand-painted folk art on handmade paper, each panel tells a story." },
@@ -88,6 +90,21 @@ function PreviewMarketplaceInner() {
   }
 
   const englishCat = categoryMap[category] ?? "All crafts";
+
+  function handleVoiceAction(action: VoiceAction) {
+    switch (action) {
+      case "nav:discover":      setActive("discover"); break;
+      case "nav:sell":          setActive("sell"); break;
+      case "nav:signin":        setNotice(t("noticePreviewSignIn")); break;
+      case "nav:signup":        setNotice(t("noticePreviewJoin")); break;
+      case "chat:open":         window.dispatchEvent(new CustomEvent("kaari:voice-chat-open")); break;
+      case "chat:close":        window.dispatchEvent(new CustomEvent("kaari:voice-chat-close")); break;
+      case "scroll:top":        window.scrollTo({ top: 0, behavior: "smooth" }); break;
+      case "scroll:catalogue":  document.getElementById("catalogue")?.scrollIntoView({ behavior: "smooth" }); break;
+      case "search:focus":      document.querySelector<HTMLInputElement>(".search input")?.focus(); break;
+      default: break;
+    }
+  }
   const shown = useMemo(() =>
     sampleProducts.filter((p) =>
       (englishCat === "All crafts" || p.category === englishCat) &&
@@ -106,6 +123,7 @@ function PreviewMarketplaceInner() {
         <button className="nav-link" onClick={() => setActive("discover")}>{t("navDiscover")}</button>
         <button className="nav-link" onClick={() => setActive("sell")}>{t("navArtisans")}</button>
         <LanguageSwitcher/>
+        <VoiceNav onAction={handleVoiceAction}/>
         <button className="button outline" onClick={() => setNotice(t("noticePreviewSignIn"))}>{t("navSignIn")}</button>
         <button className="button"        onClick={() => setNotice(t("noticePreviewJoin"))}>{t("navJoin")}</button>
       </nav>
