@@ -406,9 +406,20 @@ function MarketplaceInner() {
                     <h3>{product.name}</h3>
                     <div className="seller-name">{t("madeBy")} {product.seller_name || t("independentArtisan")}</div>
                     <p className="product-description">{product.description || `Handmade ${product.category.toLowerCase()}.`}</p>
+                    {/* Detail chips */}
+                    <div className="product-chips">
+                      <span className="product-chip">📦 Min. {product.minimum_order_quantity} units</span>
+                      {product.quantity_available > 0
+                        ? <span className="product-chip product-chip--green">✓ {product.quantity_available} in stock</span>
+                        : <span className="product-chip product-chip--red">Out of stock</span>}
+                      {product.lead_time && <span className="product-chip">🕐 {product.lead_time}</span>}
+                    </div>
+                    <button className="button soft estimate-product-button" onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent("kaari:estimate-product", { detail: product })); }}>
+                      {t("estimateButton")}
+                    </button>
                     <div className="product-foot">
                       <div className="product-price">₹{product.price_inr.toLocaleString("en-IN")}<small>{t("perPieceMin")} {product.minimum_order_quantity}</small></div>
-                      <button className="button" onClick={(e) => { e.stopPropagation(); openProduct(product.id); }}>View</button>
+                      <button className="button" onClick={(e) => { e.stopPropagation(); openProduct(product.id); }}>View & Buy</button>
                     </div>
                   </div>
                 </article>
