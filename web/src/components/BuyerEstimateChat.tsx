@@ -8,8 +8,10 @@ import { LANG_LOCALE } from "@/lib/voiceCommands";
 // Extend window type for webkit prefix
 declare global {
   interface Window {
-    SpeechRecognition: typeof SpeechRecognition;
-    webkitSpeechRecognition: typeof SpeechRecognition;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    SpeechRecognition: any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    webkitSpeechRecognition: any;
   }
 }
 
@@ -55,7 +57,7 @@ export default function BuyerEstimateChat() {
   ]);
   const bottom = useRef<HTMLDivElement>(null);
   const prevLang = useRef(lang);
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const recognitionRef = useRef<unknown>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
   const locale = LANG_LOCALE[lang] ?? "en-IN";
@@ -78,7 +80,7 @@ export default function BuyerEstimateChat() {
 
     recognition.onstart = () => setMicListening(true);
 
-    recognition.onresult = (event) => {
+    recognition.onresult = (event: { resultIndex: number; results: { [key: number]: { isFinal: boolean; [key: number]: { transcript: string } } } }) => {
       let interim = "";
       let final = "";
       for (let i = event.resultIndex; i < event.results.length; i++) {
@@ -103,7 +105,7 @@ export default function BuyerEstimateChat() {
       });
     };
 
-    recognition.onerror = (event) => {
+    recognition.onerror = (event: { error: string }) => {
       if (event.error !== "aborted" && event.error !== "no-speech") {
         console.error("Voice input error:", event.error);
       }
@@ -115,7 +117,7 @@ export default function BuyerEstimateChat() {
   }
 
   function stopVoiceInput() {
-    recognitionRef.current?.stop();
+    (recognitionRef.current as { stop?: () => void })?.stop?.();
     recognitionRef.current = null;
     setMicListening(false);
   }

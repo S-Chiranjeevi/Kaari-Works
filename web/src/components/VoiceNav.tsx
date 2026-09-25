@@ -8,8 +8,10 @@ import { matchCommand, VOICE_FEEDBACK, VoiceAction, LANG_LOCALE } from "@/lib/vo
 // Extend window type for webkit prefix
 declare global {
   interface Window {
-    SpeechRecognition: typeof SpeechRecognition;
-    webkitSpeechRecognition: typeof SpeechRecognition;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    SpeechRecognition: any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    webkitSpeechRecognition: any;
   }
 }
 
@@ -24,7 +26,7 @@ export default function VoiceNav({ onAction }: Props) {
   const [status, setStatus] = useState<Status>("idle");
   const [transcript, setTranscript] = useState("");
   const [toast, setToast] = useState("");
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const recognitionRef = useRef<unknown>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Check browser support
@@ -53,7 +55,7 @@ export default function VoiceNav({ onAction }: Props) {
   }, [lang]);
 
   const stopListening = useCallback(() => {
-    recognitionRef.current?.stop();
+    (recognitionRef.current as { stop?: () => void })?.stop?.();
     recognitionRef.current = null;
     setStatus("idle");
     setTranscript("");
@@ -71,7 +73,7 @@ export default function VoiceNav({ onAction }: Props) {
 
     recognition.onstart = () => setStatus("listening");
 
-    recognition.onresult = (event) => {
+    recognition.onresult = (event: { resultIndex: number; results: { length: number; [key: number]: { length: number; isFinal: boolean; [key: number]: { transcript: string } } } }) => {
       setStatus("processing");
       // Collect all alternatives from all results
       const allTranscripts: string[] = [];
@@ -101,7 +103,7 @@ export default function VoiceNav({ onAction }: Props) {
       }
     };
 
-    recognition.onerror = (event) => {
+    recognition.onerror = (event: { error: string }) => {
       if (event.error === "no-speech") {
         showToast({ en: "No speech detected. Try again.", hi: "कोई आवाज़ नहीं आई। फिर से कोशिश करें।", ta: "பேச்சு கேட்கவில்லை. மீண்டும் முயற்சிக்கவும்.", te: "మాట వినబడలేదు. మళ్ళీ ప్రయత్నించండి." }[lang as "en"|"hi"|"ta"|"te"] ?? "No speech detected.");
       } else if (event.error !== "aborted") {
