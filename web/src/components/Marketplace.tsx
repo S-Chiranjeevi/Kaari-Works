@@ -396,30 +396,27 @@ function MarketplaceInner() {
             : products.length === 0
               ? <div className="empty">{search ? `No results for "${search}"` : t("emptyProducts")}</div>
               : products.map((product) => (
-                <article className="product-card product-card--clickable" key={product.id} onClick={() => openProduct(product.id)}>
-                  <div className="product-art">
+                <article className="product-card product-card--clickable product-card--split" key={product.id} onClick={() => openProduct(product.id)}>
+                  <div className="product-art product-art--half">
                     {product.image_url ? <img src={product.image_url} alt={product.name}/> : <span aria-hidden="true">{productIcon(product.category)}</span>}
                     <span className="category-label">{product.category}</span>
                     {product.quantity_available <= 0 && <span className="out-of-stock-badge">Out of stock</span>}
                   </div>
-                  <div className="product-body">
+                  <div className="product-body product-body--half">
                     <h3>{product.name}</h3>
                     <div className="seller-name">{t("madeBy")} {product.seller_name || t("independentArtisan")}</div>
                     <p className="product-description">{product.description || `Handmade ${product.category.toLowerCase()}.`}</p>
                     {/* Detail chips */}
                     <div className="product-chips">
-                      <span className="product-chip">📦 Min. {product.minimum_order_quantity} units</span>
+                      <span className="product-chip">📦 Min. {product.minimum_order_quantity}</span>
                       {product.quantity_available > 0
                         ? <span className="product-chip product-chip--green">✓ {product.quantity_available} in stock</span>
                         : <span className="product-chip product-chip--red">Out of stock</span>}
                       {product.lead_time && <span className="product-chip">🕐 {product.lead_time}</span>}
                     </div>
-                    <button className="button soft estimate-product-button" onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent("kaari:estimate-product", { detail: product })); }}>
-                      {t("estimateButton")}
-                    </button>
                     <div className="product-foot">
-                      <div className="product-price">₹{product.price_inr.toLocaleString("en-IN")}<small>{t("perPieceMin")} {product.minimum_order_quantity}</small></div>
-                      <button className="button" onClick={(e) => { e.stopPropagation(); openProduct(product.id); }}>View & Buy</button>
+                      <div className="product-price">₹{product.price_inr.toLocaleString("en-IN")}<small> / piece</small></div>
+                      <button className="button" style={{fontSize:11,padding:"6px 12px"}} onClick={(e) => { e.stopPropagation(); openProduct(product.id); }}>View & Buy</button>
                     </div>
                   </div>
                 </article>

@@ -158,3 +158,21 @@
 .cl-userPreviewMainIdentifier{color:#17322f!important;font-weight:600}
 .cl-userPreviewSecondaryIdentifier{color:#6d7e78!important}
 .cl-userButtonPopoverCard .cl-internal-b3fm6y{background:#fff!important}
+
+/* ── Split product card (half image / half details) ──────────────────────── */
+.product-card--split{display:flex;flex-direction:row;height:180px;overflow:hidden}
+.product-art--half{width:45%;min-width:45%;height:100%;flex-shrink:0;border-radius:0;position:relative}
+.product-art--half img{width:100%;height:100%;object-fit:cover}
+.product-art--half span[aria-hidden]{font-size:52px;display:grid;place-items:center;height:100%}
+.product-body--half{flex:1;padding:12px 14px;display:flex;flex-direction:column;gap:4px;overflow:hidden;min-width:0}
+.product-body--half h3{font-size:14px;font-weight:700;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.product-body--half .seller-name{font-size:11px}
+.product-body--half .product-description{font-size:11px;line-height:1.45;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;flex-shrink:0;margin:0}
+.product-body--half .product-chips{gap:4px;margin:4px 0}
+.product-body--half .product-chip{font-size:9px;padding:2px 6px}
+.product-body--half .product-foot{margin-top:auto;padding-top:4px}
+.product-body--half .product-price{font-size:15px}
+.product-body--half .product-price small{font-size:10px}
+/* Make product grid single column for split cards */
+.product-grid:has(.product-card--split){grid-template-columns:1fr}
+@media(min-width:700px){.product-grid:has(.product-card--split){grid-template-columns:repeat(2,1fr)}}
