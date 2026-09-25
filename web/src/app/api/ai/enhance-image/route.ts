@@ -30,16 +30,17 @@ async function pollReplicate(predictionUrl: string, token: string): Promise<stri
 async function replicatePredict(
   model: string,
   input: Record<string, unknown>,
-  token: string
+  token: string,
+  waitSeconds = 10
 ): Promise<string> {
   const res = await fetch(`https://api.replicate.com/v1/models/${model}/predictions`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
-      Prefer: "wait=10",
+      Prefer: `wait=${waitSeconds}`,
     },
-    signal: AbortSignal.timeout(15_000),
+    signal: AbortSignal.timeout((waitSeconds + 5) * 1000),
     body: JSON.stringify({ input }),
   });
   const prediction = await res.json();
@@ -49,6 +50,9 @@ async function replicatePredict(
     const output = Array.isArray(prediction.output) ? prediction.output[0] : prediction.output;
     if (typeof output === "string") return output;
     throw new Error("No output URL in succeeded prediction");
+  }
+  if (prediction.status === "failed" || prediction.status === "canceled") {
+    throw new Error(prediction.error ?? "Replicate prediction failed");
   }
   if (prediction.urls?.get) return pollReplicate(prediction.urls.get, token);
   throw new Error("No polling URL returned");
@@ -75,12 +79,13 @@ export async function POST(request: NextRequest) {
   if (match[2].length > 1_500_000)
     return NextResponse.json({ detail: "Choose an image smaller than 1 MB." }, { status: 413 });
 
-  // ── Attempt 1: Real-ESRGAN upscale/enhance ────────────────────────────────
+  // ── Attempt 1: Real-ESRGAN upscale/enhance (fast attempt, fail quickly) ──
   try {
     const outputUrl = await replicatePredict(
       "nightmareai/real-esrgan",
       { image, scale: 2, face_enhance: false },
-      replicateToken
+      replicateToken,
+      5  // only wait 5s — if cold start, skip to background removal
     );
     const imgRes = await fetch(outputUrl, { signal: AbortSignal.timeout(20_000) });
     if (!imgRes.ok) throw new Error("Failed to download enhanced image");
@@ -96,7 +101,8 @@ export async function POST(request: NextRequest) {
     const cutoutUrl = await replicatePredict(
       "lucataco/remove-bg",
       { image },
-      replicateToken
+      replicateToken,
+      45  // give background removal the full time budget
     );
     const cutoutRes = await fetch(cutoutUrl, { signal: AbortSignal.timeout(20_000) });
     if (!cutoutRes.ok) throw new Error("Failed to download cutout image");
