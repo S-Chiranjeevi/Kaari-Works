@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ArrowRight, HeartHandshake, Leaf, Search, ShieldCheck } from "lucide-react";
+import { ArrowRight, HeartHandshake, Leaf, Search, ShieldCheck, ShoppingBag, Store, Package, User } from "lucide-react";
 import BuyerEstimateChat from "@/components/BuyerEstimateChat";
 import { FairPriceGuide, ProductPhotoUpload } from "@/components/SellerListingControls";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
@@ -113,19 +113,36 @@ function PreviewMarketplaceInner() {
   [englishCat, search]);
 
   return <div className="page-shell">
-    <div style={{background:"#fff4d6",textAlign:"center",padding:"8px 14px",fontSize:12,color:"#72551c",fontWeight:700}}>
+    <div style={{background:"#fff4d6",textAlign:"center",padding:"6px 14px",fontSize:11,color:"#72551c",fontWeight:700}}>
       {t("previewBanner")}
     </div>
 
-    <header className="site-header">
+    {/* ── Top navigation bar ── */}
+    <header className="site-header top-nav-bar">
       <a href="#top" className="brand"><span className="brand-mark">✿</span><span>Kaari<span className="brand-accent">Works</span></span></a>
-      <nav className="header-actions">
-        <button className="nav-link" onClick={() => setActive("discover")}>{t("navDiscover")}</button>
-        <button className="nav-link" onClick={() => setActive("sell")}>{t("navArtisans")}</button>
-        <LanguageSwitcher/>
-        <VoiceNav onAction={handleVoiceAction}/>
-        <button className="button outline" onClick={() => setNotice(t("noticePreviewSignIn"))}>{t("navSignIn")}</button>
-        <button className="button"        onClick={() => setNotice(t("noticePreviewJoin"))}>{t("navJoin")}</button>
+      <nav className="top-nav-tabs" aria-label="Main navigation">
+        <button className={`top-nav-item ${active === "discover" ? "top-nav-item--active" : ""}`} onClick={() => setActive("discover")}>
+          <ShoppingBag size={18}/>
+          <span>{t("navBuy")}</span>
+        </button>
+        <button className={`top-nav-item ${active === "sell" ? "top-nav-item--active" : ""}`} onClick={() => setActive("sell")}>
+          <Store size={18}/>
+          <span>{t("navSell")}</span>
+        </button>
+        <button className="top-nav-item" onClick={() => setNotice(t("noticePreviewSignIn"))}>
+          <Package size={18}/>
+          <span>{t("navOrders")}</span>
+        </button>
+        <div className="top-nav-item top-nav-lang">
+          <LanguageSwitcher/>
+        </div>
+        <div className="top-nav-item top-nav-voice">
+          <VoiceNav onAction={handleVoiceAction}/>
+        </div>
+        <button className="top-nav-item" onClick={() => setNotice(t("noticePreviewSignIn"))}>
+          <User size={18}/>
+          <span>{t("navProfile")}</span>
+        </button>
       </nav>
     </header>
 
@@ -151,14 +168,59 @@ function PreviewMarketplaceInner() {
       </div>
 
       <section className="section" id="catalogue">
-        <div className="section-head">
-          <div><h2>{t("catalogueHeading")}</h2><p>{t("catalogueSub")}</p></div>
-          <label className="search"><Search size={17}/><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t("searchPlaceholder")}/></label>
+        <div className="section-head-simple">
+          <h2>{t("catalogueHeading")}</h2>
         </div>
-        <div className="filters">
-          {categories.map((item) => <button key={item} className={`filter ${category === item ? "active" : ""}`} onClick={() => setCategory(item)}>{item}</button>)}
+        {/* Category icon grid */}
+        <div className="cat-icon-grid">
+          {[
+            { key: "catTextiles",  eng: "Textiles",           emoji: "🧵", bg: "#fde8e0" },
+            { key: "catPottery",   eng: "Pottery & ceramics",  emoji: "🏺", bg: "#fde0e0" },
+            { key: "catWoodwork",  eng: "Woodwork",             emoji: "🪵", bg: "#fdf3d0" },
+            { key: "catJewellery", eng: "Jewellery",            emoji: "💍", bg: "#e8e0fd" },
+            { key: "catHomeDecor", eng: "Home decor",           emoji: "🏡", bg: "#e0fde8" },
+            { key: "catBaskets",   eng: "Baskets",              emoji: "🧺", bg: "#fde8f5" },
+            { key: "catPaintings", eng: "Paintings",            emoji: "🎨", bg: "#e0ecfd" },
+            { key: "catAll",       eng: "All crafts",           emoji: "⋯",  bg: "#e8e8e8" },
+          ].map(({ key, eng, emoji, bg }) => (
+            <button
+              key={eng}
+              className={`cat-icon-btn ${(categoryMap[category] ?? "All crafts") === eng ? "cat-icon-btn--active" : ""}`}
+              onClick={() => setCategory(t(key as Parameters<typeof t>[0]))}
+              aria-pressed={(categoryMap[category] ?? "All crafts") === eng}
+            >
+              <span className="cat-icon-circle" style={{background: bg}}>{emoji}</span>
+              <span className="cat-icon-label">{t(key as Parameters<typeof t>[0])}</span>
+            </button>
+          ))}
         </div>
-        <div className="product-grid">
+
+        {/* Featured Artisans */}
+        <div className="featured-head">
+          <strong>{t("featuredArtisans")}</strong>
+          <button className="featured-view-all" onClick={() => setCategory(t("catAll"))}>{t("viewAll")} ›</button>
+        </div>
+        <div className="featured-scroll">
+          {[
+            { name: "Sita Devi",    product: "Madhubani Story Panel",        region: "Madhubani, Bihar",  price: 1200, icon: "🎨", color: "#f5e2cf" },
+            { name: "Razia Khatri", product: "Ajrakh Cotton Table Runner",    region: "Kutch, Gujarat",    price: 980,  icon: "🧵", color: "#ead9d5" },
+            { name: "Imran Khan",   product: "Blue Pottery Serving Bowl",     region: "Jaipur, Rajasthan", price: 1450, icon: "🏺", color: "#dce9ef" },
+            { name: "Lakshmi SHG",  product: "Handwoven Market Basket",       region: "Kerala",            price: 850,  icon: "🧺", color: "#eee1c9" },
+            { name: "Ravi Kumar",   product: "Carved Teak Desk Tray",         region: "Saharanpur, UP",    price: 1750, icon: "🪵", color: "#ead7bd" },
+          ].map((a) => (
+            <article className="featured-card" key={a.name} style={{background: a.color}}>
+              <div className="featured-icon">{a.icon}</div>
+              <div className="featured-info">
+                <strong>{a.product}</strong>
+                <span>{a.name}</span>
+                <span className="featured-region">{a.region}</span>
+                <span className="featured-price">₹{a.price.toLocaleString("en-IN")}</span>
+              </div>
+            </article>
+          ))}
+        </div>
+
+        <div className="product-grid" style={{marginTop:"24px"}}>
           {shown.map((product) => (
             <article className="product-card" key={product.name}>
               <div className="product-art" style={{background: product.color}}>

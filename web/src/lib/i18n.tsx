@@ -27,6 +27,14 @@ const translations = {
     navEnquiries: "Enquiries",
     navSignIn: "Sign in",
     navJoin: "Join Kaari",
+    // Bottom nav bar
+    navBuy: "Buy",
+    navSell: "Sell",
+    navOrders: "Orders",
+    navProfile: "Profile",
+    // Featured artisans
+    featuredArtisans: "Featured Artisans",
+    viewAll: "View All",
 
     // Preview banner
     previewBanner: "Preview mode · Sample listings shown. Add your Clerk and database keys to enable accounts and live listings.",
@@ -196,6 +204,12 @@ const translations = {
     navEnquiries: "पूछताछ",
     navSignIn: "साइन इन करें",
     navJoin: "काारी से जुड़ें",
+    navBuy: "खरीदें",
+    navSell: "बेचें",
+    navOrders: "ऑर्डर",
+    navProfile: "प्रोफाइल",
+    featuredArtisans: "प्रमुख कारीगर",
+    viewAll: "सभी देखें",
 
     previewBanner: "प्रीव्यू मोड · नमूना लिस्टिंग दिखाई जा रही है। खाते और लाइव लिस्टिंग के लिए Clerk और डेटाबेस की जानकारी जोड़ें।",
 
@@ -352,6 +366,12 @@ const translations = {
     navEnquiries: "விசாரணைகள்",
     navSignIn: "உள்நுழைக",
     navJoin: "காரியில் சேருங்கள்",
+    navBuy: "வாங்குங்கள்",
+    navSell: "விற்கவும்",
+    navOrders: "ஆர்டர்கள்",
+    navProfile: "சுயவிவரம்",
+    featuredArtisans: "சிறப்பு கலைஞர்கள்",
+    viewAll: "அனைத்தும் பார்க்க",
 
     previewBanner: "முன்னோட்ட பயன்முறை · மாதிரி பட்டியல்கள் காட்டப்படுகின்றன.",
 
@@ -508,6 +528,12 @@ const translations = {
     navEnquiries: "విచారణలు",
     navSignIn: "సైన్ ఇన్ చేయండి",
     navJoin: "కారిలో చేరండి",
+    navBuy: "కొనండి",
+    navSell: "అమ్మండి",
+    navOrders: "ఆర్డర్లు",
+    navProfile: "ప్రొఫైల్",
+    featuredArtisans: "విశేష కళాకారులు",
+    viewAll: "అన్నీ చూడండి",
 
     previewBanner: "ప్రివ్యూ మోడ్ · నమూనా జాబితాలు చూపబడుతున్నాయి.",
 
@@ -663,6 +689,12 @@ const translations = {
     navEnquiries: "ವಿಚಾರಣೆಗಳು",
     navSignIn: "ಸೈನ್ ಇನ್ ಮಾಡಿ",
     navJoin: "ಕಾರಿಗೆ ಸೇರಿ",
+    navBuy: "ಖರೀದಿಸಿ",
+    navSell: "ಮಾರಿ",
+    navOrders: "ಆರ್ಡರ್ಗಳು",
+    navProfile: "ಪ್ರೊಫೈಲ್",
+    featuredArtisans: "ವಿಶೇಷ ಕಲಾವಿದರು",
+    viewAll: "ಎಲ್ಲ ನೋಡಿ",
     previewBanner: "ಪ್ರಿವ್ಯೂ ಮೋಡ್ · ಮಾದರಿ ಪಟ್ಟಿಗಳು ತೋರಿಸಲಾಗುತ್ತಿದೆ.",
     heroEyebrow: "ಪ್ರೀತಿಯಿಂದ ತಯಾರಿಸಿದ, ನಂಬಿಕೆಯಿಂದ ವ್ಯಾಪಾರ",
     heroHeading: "ಸಂಪ್ರದಾಯ\nನಿಮ್ಮ ಕೈಯಲ್ಲಿ.",

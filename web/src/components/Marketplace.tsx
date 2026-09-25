@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { SignedIn, SignedOut, SignInButton, SignUpButton, UserButton, useAuth } from "@clerk/nextjs";
-import { ArrowRight, HeartHandshake, Leaf, Menu, MessageCircle, Search, ShieldCheck, Sparkles, X } from "lucide-react";
+import { MessageCircle, Search, ShoppingBag, Store, Package, User, X } from "lucide-react";
 import BuyerEstimateChat from "@/components/BuyerEstimateChat";
 import { FairPriceGuide, ProductPhotoUpload } from "@/components/SellerListingControls";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
@@ -25,13 +25,34 @@ type ListingForm = {
 
 const blankForm: ListingForm = { name: "", category: "Textiles", description: "", price: "", cost: "", hours: "", experience: "", quantity: "20", minimum: "5", leadTime: "", image: "" };
 
+// Category icon grid data
+const CATEGORY_ICONS = [
+  { key: "catTextiles",  eng: "Textiles",           emoji: "🧵", bg: "#fde8e0" },
+  { key: "catPottery",   eng: "Pottery & ceramics",  emoji: "🏺", bg: "#fde0e0" },
+  { key: "catWoodwork",  eng: "Woodwork",             emoji: "🪵", bg: "#fdf3d0" },
+  { key: "catJewellery", eng: "Jewellery",            emoji: "💍", bg: "#e8e0fd" },
+  { key: "catHomeDecor", eng: "Home decor",           emoji: "🏡", bg: "#e0fde8" },
+  { key: "catBaskets",   eng: "Baskets",              emoji: "🧺", bg: "#fde8f5" },
+  { key: "catPaintings", eng: "Paintings",            emoji: "🎨", bg: "#e0ecfd" },
+  { key: "catAll",       eng: "All crafts",           emoji: "⋯",  bg: "#e8e8e8" },
+] as const;
+
+// Featured artisans data
+const FEATURED_ARTISANS = [
+  { name: "Sita Devi",         craft: "Madhubani Paintings",    region: "Madhubani, Bihar",   price: 1200, icon: "🎨", color: "#f5e2cf", product: "Madhubani Story Panel" },
+  { name: "Razia Khatri",      craft: "Ajrakh Block Print",     region: "Kutch, Gujarat",     price: 980,  icon: "🧵", color: "#ead9d5", product: "Ajrakh Cotton Table Runner" },
+  { name: "Imran Khan",        craft: "Blue Pottery",           region: "Jaipur, Rajasthan",  price: 1450, icon: "🏺", color: "#dce9ef", product: "Blue Pottery Serving Bowl" },
+  { name: "Lakshmi SHG",       craft: "Natural Fibre Weaving",  region: "Kerala",             price: 850,  icon: "🧺", color: "#eee1c9", product: "Handwoven Market Basket" },
+  { name: "Ravi Kumar",        craft: "Teak Woodcarving",       region: "Saharanpur, UP",     price: 1750, icon: "🪵", color: "#ead7bd", product: "Carved Teak Desk Tray" },
+];
+
 function MarketplaceInner() {
   const { t } = useLang();
   const { isSignedIn, userId, getToken } = useAuth();
   const [tab, setTab] = useState<"discover" | "sell" | "inquiries">("discover");
   const [products, setProducts] = useState<Product[]>([]);
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
-  const [category, setCategory] = useState(t("catAll"));
+  const [category, setCategory] = useState("All crafts"); // always English internally
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -41,23 +62,6 @@ function MarketplaceInner() {
   const [contact, setContact] = useState<Product | null>(null);
   const [contactQuantity, setContactQuantity] = useState("10");
   const [contactMessage, setContactMessage] = useState("");
-
-  const categories = useMemo(() => [
-    t("catAll"), t("catTextiles"), t("catPottery"), t("catWoodwork"),
-    t("catJewellery"), t("catHomeDecor"), t("catBaskets"), t("catPaintings"),
-  ], [t]);
-
-  // Map translated category back to English for API
-  const categoryMap = useMemo(() => ({
-    [t("catAll")]: "All crafts",
-    [t("catTextiles")]: "Textiles",
-    [t("catPottery")]: "Pottery & ceramics",
-    [t("catWoodwork")]: "Woodwork",
-    [t("catJewellery")]: "Jewellery",
-    [t("catHomeDecor")]: "Home decor",
-    [t("catBaskets")]: "Baskets",
-    [t("catPaintings")]: "Paintings",
-  }), [t]);
 
   const api = useCallback(async (path: string, init: RequestInit = {}, authenticated = false) => {
     const headers = new Headers(init.headers);
@@ -78,15 +82,14 @@ function MarketplaceInner() {
     try {
       const query = new URLSearchParams();
       if (search.trim()) query.set("q", search.trim());
-      const englishCat = categoryMap[category];
-      if (englishCat && englishCat !== "All crafts") query.set("category", englishCat);
+      if (category !== "All crafts") query.set("category", category);
       setProducts(await api(`/api/products?${query.toString()}`));
     } catch (error) {
       setNotice(error instanceof Error ? error.message : t("noticeLoadFail"));
     } finally {
       setLoading(false);
     }
-  }, [api, category, categoryMap, search, t]);
+  }, [api, category, search, t]);
 
   const loadInquiries = useCallback(async () => {
     if (!isSignedIn) return setInquiries([]);
@@ -179,27 +182,50 @@ function MarketplaceInner() {
       case "scroll:top":        window.scrollTo({ top: 0, behavior: "smooth" }); break;
       case "scroll:catalogue":  document.getElementById("catalogue")?.scrollIntoView({ behavior: "smooth" }); break;
       case "search:focus":      document.querySelector<HTMLInputElement>(".search input")?.focus(); break;
-      case "help":              break; // feedback is spoken by VoiceNav itself
+      case "help":              break;
     }
   }
 
   return <div className="page-shell">
-    <header className="site-header">
+    {/* ── Top navigation bar ── */}
+    <header className="site-header top-nav-bar">
       <a href="#top" className="brand"><span className="brand-mark">✿</span><span>Kaari<span className="brand-accent">Works</span></span></a>
-      <nav className="header-actions" aria-label="Main navigation">
-        <button className="nav-link" onClick={() => setTab("discover")}>{t("navDiscover")}</button>
-        <button className="nav-link" onClick={() => setTab("sell")}>{t("navArtisans")}</button>
-        <button className="nav-link" onClick={() => setTab("inquiries")}>{t("navEnquiries")}</button>
-        <LanguageSwitcher />
-        <VoiceNav onAction={handleVoiceAction} />
+      <nav className="top-nav-tabs" aria-label="Main navigation">
+        <button className={`top-nav-item ${tab === "discover" ? "top-nav-item--active" : ""}`} onClick={() => setTab("discover")}>
+          <ShoppingBag size={18}/>
+          <span>{t("navBuy")}</span>
+        </button>
+        <button className={`top-nav-item ${tab === "sell" ? "top-nav-item--active" : ""}`} onClick={() => setTab("sell")}>
+          <Store size={18}/>
+          <span>{t("navSell")}</span>
+        </button>
+        <button className={`top-nav-item ${tab === "inquiries" ? "top-nav-item--active" : ""}`} onClick={() => setTab("inquiries")}>
+          <Package size={18}/>
+          <span>{t("navOrders")}</span>
+        </button>
+        <div className="top-nav-item top-nav-lang">
+          <LanguageSwitcher />
+        </div>
+        <div className="top-nav-item top-nav-voice">
+          <VoiceNav onAction={handleVoiceAction} />
+        </div>
         <SignedOut>
-          <SignInButton mode="redirect"><button className="button outline">{t("navSignIn")}</button></SignInButton>
-          <SignUpButton mode="redirect"><button className="button">{t("navJoin")}</button></SignUpButton>
+          <SignInButton mode="redirect">
+            <button className="top-nav-item">
+              <User size={18}/>
+              <span>{t("navProfile")}</span>
+            </button>
+          </SignInButton>
         </SignedOut>
-        <SignedIn><UserButton /></SignedIn>
+        <SignedIn>
+          <div className="top-nav-item top-nav-profile">
+            <UserButton />
+          </div>
+        </SignedIn>
       </nav>
     </header>
 
+    {/* ── Discover tab ── */}
     {tab === "discover" && <>
       <section className="hero" id="top">
         <div className="hero-card">
@@ -207,29 +233,51 @@ function MarketplaceInner() {
             <div className="eyebrow">{t("heroEyebrow")}</div>
             <h1>{t("heroHeading").split("\n").map((line, i) => <span key={i}>{line}{i === 0 && <br/>}</span>)}</h1>
             <p>{t("heroParagraph")}</p>
-            <button className="button" onClick={() => document.getElementById("catalogue")?.scrollIntoView({ behavior: "smooth" })}>
-              {t("heroCta")} <ArrowRight size={16}/>
-            </button>
           </div>
           <div className="hero-art" aria-hidden="true">🪡</div>
         </div>
       </section>
 
-      <div className="trust-row">
-        <div className="trust"><span className="trust-icon"><HeartHandshake size={20}/></span><span><strong>{t("trust1Title")}</strong><small>{t("trust1Sub")}</small></span></div>
-        <div className="trust"><span className="trust-icon"><ShieldCheck size={20}/></span><span><strong>{t("trust2Title")}</strong><small>{t("trust2Sub")}</small></span></div>
-        <div className="trust"><span className="trust-icon"><Leaf size={20}/></span><span><strong>{t("trust3Title")}</strong><small>{t("trust3Sub")}</small></span></div>
-      </div>
-
       <section className="section" id="catalogue">
-        <div className="section-head">
-          <div><h2>{t("catalogueHeading")}</h2><p>{t("catalogueSub")}</p></div>
-          <label className="search"><Search size={17}/><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t("searchPlaceholder")}/></label>
+        {/* Category icon grid */}
+        <div className="section-head-simple">
+          <h2>{t("catalogueHeading")}</h2>
         </div>
-        <div className="filters">
-          {categories.map((item) => <button key={item} className={`filter ${category === item ? "active" : ""}`} onClick={() => setCategory(item)}>{item}</button>)}
+        <div className="cat-icon-grid">
+          {CATEGORY_ICONS.map(({ key, eng, emoji, bg }) => (
+            <button
+              key={eng}
+              className={`cat-icon-btn ${category === eng ? "cat-icon-btn--active" : ""}`}
+              onClick={() => setCategory(eng)}
+              aria-pressed={category === eng}
+            >
+              <span className="cat-icon-circle" style={{background: bg}}>{emoji}</span>
+              <span className="cat-icon-label">{t(key as Parameters<typeof t>[0])}</span>
+            </button>
+          ))}
         </div>
-        <div className="product-grid">
+
+        {/* Featured Artisans */}
+        <div className="featured-head">
+          <strong>{t("featuredArtisans")}</strong>
+          <button className="featured-view-all" onClick={() => setCategory("All crafts")}>{t("viewAll")} ›</button>
+        </div>
+        <div className="featured-scroll">
+          {FEATURED_ARTISANS.map((a) => (
+            <article className="featured-card" key={a.name} style={{background: a.color}}>
+              <div className="featured-icon">{a.icon}</div>
+              <div className="featured-info">
+                <strong>{a.product}</strong>
+                <span>{a.name}</span>
+                <span className="featured-region">{a.region}</span>
+                <span className="featured-price">₹{a.price.toLocaleString("en-IN")}</span>
+              </div>
+            </article>
+          ))}
+        </div>
+
+        {/* Product grid */}
+        <div className="product-grid" style={{marginTop: "24px"}}>
           {loading
             ? <div className="empty">{t("loading")}</div>
             : products.length === 0
@@ -259,6 +307,7 @@ function MarketplaceInner() {
       </section>
     </>}
 
+    {/* ── Sell tab ── */}
     {tab === "sell" && <main className="seller-layout">
       <div className="seller-heading">
         <div className="eyebrow" style={{color:"#13866c"}}>{t("sellEyebrow")}</div>
@@ -294,6 +343,7 @@ function MarketplaceInner() {
       </SignedIn>
     </main>}
 
+    {/* ── Orders / Inquiries tab ── */}
     {tab === "inquiries" && <main className="inbox">
       <div className="eyebrow">{t("enquiriesEyebrow")}</div>
       <h1>{t("enquiriesHeading")}</h1>
@@ -319,7 +369,6 @@ function MarketplaceInner() {
       </SignedIn>
     </main>}
 
-    <footer className="footer">{t("footer")}</footer>
     <BuyerEstimateChat/>
 
     {contact && <div className="modal-backdrop" role="presentation" onMouseDown={(e) => { if (e.target === e.currentTarget) setContact(null); }}>
