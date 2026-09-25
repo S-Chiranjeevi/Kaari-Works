@@ -93,8 +93,10 @@ function PreviewMarketplaceInner() {
 
   function handleVoiceAction(action: VoiceAction) {
     switch (action) {
-      case "nav:discover":      setActive("discover"); break;
+      case "nav:buy":           setActive("discover"); break;
       case "nav:sell":          setActive("sell"); break;
+      case "nav:orders":
+      case "nav:enquiry":       setNotice(t("noticePreviewSignIn")); break;
       case "nav:signin":        setNotice(t("noticePreviewSignIn")); break;
       case "nav:signup":        setNotice(t("noticePreviewJoin")); break;
       case "chat:open":         window.dispatchEvent(new CustomEvent("kaari:voice-chat-open")); break;

@@ -172,9 +172,11 @@ function MarketplaceInner() {
 
   function handleVoiceAction(action: VoiceAction) {
     switch (action) {
-      case "nav:discover":      setTab("discover"); break;
+      case "nav:buy":           setTab("discover"); break;
       case "nav:sell":          setTab("sell"); break;
-      case "nav:inquiries":     setTab("inquiries"); break;      case "nav:signin":        window.location.href = "/sign-in"; break;
+      case "nav:orders":        setTab("inquiries"); break;
+      case "nav:enquiry":       setTab("enquiry"); break;
+      case "nav:signin":        window.location.href = "/sign-in"; break;
       case "nav:signup":        window.location.href = "/sign-up"; break;
       case "chat:open":         window.dispatchEvent(new CustomEvent("kaari:voice-chat-open")); break;
       case "chat:close":        window.dispatchEvent(new CustomEvent("kaari:voice-chat-close")); break;
