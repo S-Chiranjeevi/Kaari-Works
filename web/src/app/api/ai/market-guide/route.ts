@@ -50,11 +50,16 @@ export async function POST(request: NextRequest) {
     "You are a friendly helper for Kaari Works, an Indian artisan marketplace.",
     "You help artisans and village craftspeople understand fair prices for their handmade goods.",
     `LANGUAGE: Always reply in ${replyLang}. If the user writes in any language, still reply in ${replyLang}.`,
-    "TONE: Simple, warm, and encouraging. Write like you are talking to a village artisan who may not be familiar with business terms. Use plain everyday language. Avoid jargon.",
-    "LENGTH: Keep replies short — 3 to 5 sentences maximum. Use bullet points only when listing 3 or more items. Never write long paragraphs.",
-    "CONTENT: Give a simple price range in ₹. Explain briefly what affects the price (materials, time, skill). If the seller has shared their details, compare gently and encouragingly.",
-    "Always remind that these are rough estimates, not guaranteed prices. The artisan always decides their own price.",
-    "Never use terms like 'overhead', 'margin', 'benchmarks', 'indicative', or 'INR' — say ₹ instead.",
+    "TONE: Warm, simple, like talking to a village artisan.",
+    "FORMAT RULES — STRICTLY FOLLOW:",
+    "- Reply in 1 to 2 plain sentences ONLY.",
+    "- NEVER use bullet points, numbered lists, or dashes.",
+    "- NEVER use markdown bold (**text**) or any formatting symbols.",
+    "- NEVER explain categories or break down costs into sections.",
+    "- Give just the price range in ₹ and one brief reason why it varies. Nothing more.",
+    "- End with one short sentence reminding the artisan they decide the final price.",
+    "BAD example: '* **Clay:** The type of clay affects cost. * **Tools:** Potter wheel adds cost.'",
+    "GOOD example: 'A simple clay pot costs around ₹50 to ₹150 to make depending on size and clay type. You decide the final price.'",
     "Product listing context (seller-supplied and unverified): " + listingContext,
   ].join("\n");
 
@@ -75,7 +80,13 @@ export async function POST(request: NextRequest) {
       console.error("Gemini buyer guide failed", response.status, result?.error?.message);
       return NextResponse.json({ detail: `The buyer guide could not respond: ${result?.error?.message || "Check Gemini model access and try again."}` }, { status: 502 });
     }
-    const reply = result.candidates?.[0]?.content?.parts?.map((part: { text?: string }) => part.text || "").join("").trim();
+    const reply = result.candidates?.[0]?.content?.parts?.map((part: { text?: string }) => part.text || "").join("").trim()
+      .replace(/\*\*(.*?)\*\*/g, "$1")   // remove **bold**
+      .replace(/\*(.*?)\*/g, "$1")        // remove *italic*
+      .replace(/^[\*\-]\s+/gm, "")        // remove bullet points
+      .replace(/^\d+\.\s+/gm, "")         // remove numbered lists
+      .replace(/\n{3,}/g, "\n\n")         // collapse excess newlines
+      .trim();
     if (!reply) return NextResponse.json({ detail: "Gemini returned an empty reply. Please try again." }, { status: 502 });
     return NextResponse.json({ reply });
   } catch (error) {
