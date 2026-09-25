@@ -16,19 +16,60 @@ export default function BuyerEstimateChat() {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
+  const [translating, setTranslating] = useState(false);
   const [listing, setListing] = useState<ListingContext | null>(null);
   const [messages, setMessages] = useState<Message[]>([
     { role: "model", text: t("chatWelcome") },
   ]);
   const bottom = useRef<HTMLDivElement>(null);
+  const prevLang = useRef(lang);
 
-  // Update welcome message when language changes
+  // When language changes, retranslate all existing model messages
   useEffect(() => {
-    setMessages((prev) => {
-      if (prev.length === 1 && prev[0].role === "model") {
-        return [{ role: "model", text: t("chatWelcome") }];
-      }
-      return prev;
+    if (prevLang.current === lang) return;
+    prevLang.current = lang;
+
+    // Always update the welcome message if it's the only message
+    if (messages.length === 1 && messages[0].role === "model") {
+      setMessages([{ role: "model", text: t("chatWelcome") }]);
+      return;
+    }
+
+    // Retranslate all model messages in the history
+    const modelMessages = messages.filter((m) => m.role === "model");
+    if (modelMessages.length === 0) return;
+
+    setTranslating(true);
+    Promise.all(
+      modelMessages.map(async (msg) => {
+        try {
+          const res = await fetch("/api/ai/market-guide", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              message: `Translate this text to the target language, keeping the same meaning and tone. Return only the translated text, nothing else: "${msg.text}"`,
+              history: [],
+              listing: null,
+              lang,
+            }),
+          });
+          const data = await res.json();
+          return res.ok ? data.reply : msg.text;
+        } catch {
+          return msg.text;
+        }
+      })
+    ).then((translated) => {
+      setMessages((prev) => {
+        let modelIdx = 0;
+        return prev.map((m) => {
+          if (m.role === "model") {
+            return { ...m, text: translated[modelIdx++] ?? m.text };
+          }
+          return m;
+        });
+      });
+      setTranslating(false);
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lang]);
@@ -91,7 +132,11 @@ export default function BuyerEstimateChat() {
             {message.text}
           </div>
         ))}
-        {busy && <div className="buyer-chat-message from-guide">{t("chatThinking")}</div>}
+        {(busy || translating) && (
+          <div className="buyer-chat-message from-guide">
+            {translating ? t("chatThinking") : t("chatThinking")}
+          </div>
+        )}
         <div ref={bottom}/>
       </div>
       <div className="buyer-chat-disclaimer">{t("chatDisclaimer")}</div>
@@ -104,7 +149,7 @@ export default function BuyerEstimateChat() {
           placeholder={t("chatPlaceholder")}
           maxLength={1200}
         />
-        <button type="submit" aria-label={t("chatSend")} disabled={busy || !draft.trim()}><Send size={17}/></button>
+        <button type="submit" aria-label={t("chatSend")} disabled={busy || translating || !draft.trim()}><Send size={17}/></button>
       </form>
     </section>}
     <button type="button" className="buyer-chat-launch" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
