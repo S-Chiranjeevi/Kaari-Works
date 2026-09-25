@@ -34,32 +34,32 @@
 /* ── Top nav bar ─────────────────────────────────────────────────────────── */
 .top-nav-bar{height:auto;padding:10px 16px;flex-wrap:wrap;gap:8px}
 .top-nav-tabs{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
-.top-nav-item{display:flex;flex-direction:column;align-items:center;gap:2px;border:0;background:none;color:var(--muted);font-size:10px;font-weight:600;padding:6px 10px;border-radius:10px;cursor:pointer;transition:background .15s,color .15s;white-space:nowrap}
+.top-nav-item{display:flex;flex-direction:column;align-items:center;gap:3px;border:0;background:none;color:var(--muted);font-size:12px;font-weight:700;padding:8px 13px;border-radius:12px;cursor:pointer;transition:background .15s,color .15s;white-space:nowrap}
 .top-nav-item:hover{background:var(--mint);color:var(--deep)}
 .top-nav-item--active{background:var(--mint);color:var(--deep)}
 .top-nav-lang,.top-nav-voice{flex-direction:row;gap:0}
-.top-nav-profile{flex-direction:column;gap:2px;font-size:10px;color:var(--muted)}
+.top-nav-profile{flex-direction:column;gap:2px;font-size:12px;color:var(--muted)}
 /* ── Category icon grid ──────────────────────────────────────────────────── */
-.section-head-simple{padding:0 0 12px}
+.section-head-simple{padding:0 0 14px}
 .section-head-simple h2{font-size:18px;font-weight:800;color:var(--ink);margin:0}
-.cat-icon-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:28px}
-.cat-icon-btn{display:flex;flex-direction:column;align-items:center;gap:7px;border:0;background:none;cursor:pointer;padding:4px 2px;border-radius:12px;transition:transform .15s}
+.cat-icon-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:30px}
+.cat-icon-btn{display:flex;flex-direction:column;align-items:center;gap:8px;border:0;background:none;cursor:pointer;padding:4px 2px;border-radius:12px;transition:transform .15s}
 .cat-icon-btn:hover{transform:scale(1.06)}
 .cat-icon-btn--active .cat-icon-circle{box-shadow:0 0 0 3px var(--green)}
-.cat-icon-circle{width:58px;height:58px;border-radius:50%;display:grid;place-items:center;font-size:26px;transition:box-shadow .15s}
-.cat-icon-label{font-size:11px;font-weight:600;color:var(--ink);text-align:center;line-height:1.2}
+.cat-icon-circle{width:72px;height:72px;border-radius:50%;display:grid;place-items:center;font-size:32px;transition:box-shadow .15s}
+.cat-icon-label{font-size:12px;font-weight:600;color:var(--ink);text-align:center;line-height:1.2}
 /* ── Featured artisans ───────────────────────────────────────────────────── */
-.featured-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
-.featured-head strong{font-size:16px;font-weight:800;color:var(--ink)}
+.featured-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.featured-head strong{font-size:17px;font-weight:800;color:var(--ink)}
 .featured-view-all{border:0;background:none;color:var(--green);font-size:13px;font-weight:600;cursor:pointer}
-.featured-scroll{display:flex;gap:12px;overflow-x:auto;padding-bottom:8px;scrollbar-width:none}
+.featured-scroll{display:flex;gap:14px;overflow-x:auto;padding-bottom:10px;scrollbar-width:none}
 .featured-scroll::-webkit-scrollbar{display:none}
-.featured-card{flex-shrink:0;width:148px;border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:6px;cursor:pointer;transition:transform .15s}
-.featured-card:hover{transform:translateY(-2px)}
-.featured-icon{font-size:32px;line-height:1}
-.featured-info{display:flex;flex-direction:column;gap:2px}
-.featured-info strong{font-size:12px;font-weight:700;color:var(--ink);line-height:1.3}
-.featured-info span{font-size:11px;color:#5a7060}
-.featured-region{font-size:10px;color:var(--muted)}
-.featured-price{font-size:13px;font-weight:800;color:var(--deep);margin-top:2px}
-@media(max-width:480px){.cat-icon-circle{width:50px;height:50px;font-size:22px}.cat-icon-label{font-size:10px}.top-nav-item{padding:5px 7px;font-size:9px}}
+.featured-card{flex-shrink:0;width:180px;border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:8px;cursor:pointer;transition:transform .15s;box-shadow:0 2px 10px #17322f14}
+.featured-card:hover{transform:translateY(-3px)}
+.featured-icon{font-size:42px;line-height:1}
+.featured-info{display:flex;flex-direction:column;gap:3px}
+.featured-info strong{font-size:13px;font-weight:700;color:var(--ink);line-height:1.3}
+.featured-info span{font-size:12px;color:#5a7060}
+.featured-region{font-size:11px;color:var(--muted)}
+.featured-price{font-size:15px;font-weight:800;color:var(--deep);margin-top:3px}
+@media(max-width:480px){.cat-icon-circle{width:60px;height:60px;font-size:26px}.cat-icon-label{font-size:11px}.top-nav-item{padding:6px 9px;font-size:11px}.featured-card{width:155px}}

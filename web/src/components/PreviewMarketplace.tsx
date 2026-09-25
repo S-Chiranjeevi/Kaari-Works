@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ArrowRight, HeartHandshake, Leaf, Search, ShieldCheck, ShoppingBag, Store, Package, User } from "lucide-react";
+import { ArrowRight, HeartHandshake, Leaf, Search, ShieldCheck, ShoppingBag, Store, Package, User, ClipboardList } from "lucide-react";
 import BuyerEstimateChat from "@/components/BuyerEstimateChat";
 import { FairPriceGuide, ProductPhotoUpload } from "@/components/SellerListingControls";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
@@ -122,16 +122,20 @@ function PreviewMarketplaceInner() {
       <a href="#top" className="brand"><span className="brand-mark">✿</span><span>Kaari<span className="brand-accent">Works</span></span></a>
       <nav className="top-nav-tabs" aria-label="Main navigation">
         <button className={`top-nav-item ${active === "discover" ? "top-nav-item--active" : ""}`} onClick={() => setActive("discover")}>
-          <ShoppingBag size={18}/>
+          <ShoppingBag size={22}/>
           <span>{t("navBuy")}</span>
         </button>
         <button className={`top-nav-item ${active === "sell" ? "top-nav-item--active" : ""}`} onClick={() => setActive("sell")}>
-          <Store size={18}/>
+          <Store size={22}/>
           <span>{t("navSell")}</span>
         </button>
         <button className="top-nav-item" onClick={() => setNotice(t("noticePreviewSignIn"))}>
-          <Package size={18}/>
+          <Package size={22}/>
           <span>{t("navOrders")}</span>
+        </button>
+        <button className="top-nav-item" onClick={() => setNotice(t("noticePreviewSignIn"))}>
+          <ClipboardList size={22}/>
+          <span>{t("navEnquiries")}</span>
         </button>
         <div className="top-nav-item top-nav-lang">
           <LanguageSwitcher/>
@@ -140,7 +144,7 @@ function PreviewMarketplaceInner() {
           <VoiceNav onAction={handleVoiceAction}/>
         </div>
         <button className="top-nav-item" onClick={() => setNotice(t("noticePreviewSignIn"))}>
-          <User size={18}/>
+          <User size={22}/>
           <span>{t("navProfile")}</span>
         </button>
       </nav>

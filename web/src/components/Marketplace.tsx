@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { SignedIn, SignedOut, SignInButton, SignUpButton, UserButton, useAuth } from "@clerk/nextjs";
-import { MessageCircle, Search, ShoppingBag, Store, Package, User, X } from "lucide-react";
+import { MessageCircle, Search, ShoppingBag, Store, Package, User, X, ClipboardList } from "lucide-react";
 import BuyerEstimateChat from "@/components/BuyerEstimateChat";
 import { FairPriceGuide, ProductPhotoUpload } from "@/components/SellerListingControls";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
@@ -49,7 +49,7 @@ const FEATURED_ARTISANS = [
 function MarketplaceInner() {
   const { t } = useLang();
   const { isSignedIn, userId, getToken } = useAuth();
-  const [tab, setTab] = useState<"discover" | "sell" | "inquiries">("discover");
+  const [tab, setTab] = useState<"discover" | "sell" | "inquiries" | "enquiry">("discover");
   const [products, setProducts] = useState<Product[]>([]);
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [category, setCategory] = useState("All crafts"); // always English internally
@@ -174,8 +174,7 @@ function MarketplaceInner() {
     switch (action) {
       case "nav:discover":      setTab("discover"); break;
       case "nav:sell":          setTab("sell"); break;
-      case "nav:inquiries":     setTab("inquiries"); break;
-      case "nav:signin":        window.location.href = "/sign-in"; break;
+      case "nav:inquiries":     setTab("inquiries"); break;      case "nav:signin":        window.location.href = "/sign-in"; break;
       case "nav:signup":        window.location.href = "/sign-up"; break;
       case "chat:open":         window.dispatchEvent(new CustomEvent("kaari:voice-chat-open")); break;
       case "chat:close":        window.dispatchEvent(new CustomEvent("kaari:voice-chat-close")); break;
@@ -192,16 +191,20 @@ function MarketplaceInner() {
       <a href="#top" className="brand"><span className="brand-mark">✿</span><span>Kaari<span className="brand-accent">Works</span></span></a>
       <nav className="top-nav-tabs" aria-label="Main navigation">
         <button className={`top-nav-item ${tab === "discover" ? "top-nav-item--active" : ""}`} onClick={() => setTab("discover")}>
-          <ShoppingBag size={18}/>
+          <ShoppingBag size={22}/>
           <span>{t("navBuy")}</span>
         </button>
         <button className={`top-nav-item ${tab === "sell" ? "top-nav-item--active" : ""}`} onClick={() => setTab("sell")}>
-          <Store size={18}/>
+          <Store size={22}/>
           <span>{t("navSell")}</span>
         </button>
         <button className={`top-nav-item ${tab === "inquiries" ? "top-nav-item--active" : ""}`} onClick={() => setTab("inquiries")}>
-          <Package size={18}/>
+          <Package size={22}/>
           <span>{t("navOrders")}</span>
+        </button>
+        <button className={`top-nav-item ${tab === "enquiry" ? "top-nav-item--active" : ""}`} onClick={() => setTab("enquiry")}>
+          <ClipboardList size={22}/>
+          <span>{t("navEnquiries")}</span>
         </button>
         <div className="top-nav-item top-nav-lang">
           <LanguageSwitcher />
@@ -212,7 +215,7 @@ function MarketplaceInner() {
         <SignedOut>
           <SignInButton mode="redirect">
             <button className="top-nav-item">
-              <User size={18}/>
+              <User size={22}/>
               <span>{t("navProfile")}</span>
             </button>
           </SignInButton>
@@ -343,10 +346,35 @@ function MarketplaceInner() {
       </SignedIn>
     </main>}
 
-    {/* ── Orders / Inquiries tab ── */}
+    {/* ── Orders tab ── */}
     {tab === "inquiries" && <main className="inbox">
       <div className="eyebrow">{t("enquiriesEyebrow")}</div>
       <h1>{t("enquiriesHeading")}</h1>
+      <SignedOut>
+        <div className="form-card">
+          <p>{t("enquiriesSignIn")}</p>
+          <SignInButton mode="redirect"><button className="button">{t("enquiriesSignInBtn")}</button></SignInButton>
+        </div>
+      </SignedOut>
+      <SignedIn>
+        {inquiries.length === 0
+          ? <div className="empty">{t("enquiriesEmpty")}</div>
+          : inquiries.filter(item => item.buyer_id === userId).map((item) => (
+            <article className="inquiry-card" key={item.id}>
+              <strong>{item.product_name} · {item.quantity} units</strong>
+              <p>{item.message}</p>
+              <div className="inquiry-meta">{item.status} · {new Date(item.created_at).toLocaleDateString()}</div>
+              {item.seller_reply && <p><strong>{t("sellerReply")}</strong> {item.seller_reply}</p>}
+            </article>
+          ))
+        }
+      </SignedIn>
+    </main>}
+
+    {/* ── Enquiry tab ── */}
+    {tab === "enquiry" && <main className="inbox">
+      <div className="eyebrow">{t("enquiriesEyebrow")}</div>
+      <h1>{t("navEnquiries")}</h1>
       <SignedOut>
         <div className="form-card">
           <p>{t("enquiriesSignIn")}</p>
