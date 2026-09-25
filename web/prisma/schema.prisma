@@ -9,39 +9,43 @@ datasource db {
 }
 
 model UserProfile {
-  clerkUserId String    @id @map("clerk_user_id") @db.VarChar(128)
-  displayName String?   @map("display_name") @db.VarChar(160)
-  email       String?   @db.VarChar(320)
-  role        String    @default("buyer") @db.VarChar(20)
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
-  products    Product[]
-  inquiriesAsBuyer Inquiry[] @relation("BuyerInquiries")
-  inquiriesAsSeller Inquiry[] @relation("SellerInquiries")
+  clerkUserId       String     @id @map("clerk_user_id") @db.VarChar(128)
+  displayName       String?    @map("display_name") @db.VarChar(160)
+  email             String?    @db.VarChar(320)
+  role              String     @default("buyer") @db.VarChar(20)
+  createdAt         DateTime   @default(now()) @map("created_at")
+  updatedAt         DateTime   @updatedAt @map("updated_at")
+  products          Product[]
+  inquiriesAsBuyer  Inquiry[]  @relation("BuyerInquiries")
+  inquiriesAsSeller Inquiry[]  @relation("SellerInquiries")
+  cart              Cart?
+  ordersAsBuyer     Order[]    @relation("BuyerOrders")
 
   @@map("user_profiles")
 }
 
 model Product {
-  id                   Int       @id @default(autoincrement())
-  sellerId             String    @map("seller_id") @db.VarChar(128)
+  id                   Int         @id @default(autoincrement())
+  sellerId             String      @map("seller_id") @db.VarChar(128)
   seller               UserProfile @relation(fields: [sellerId], references: [clerkUserId], onDelete: Cascade)
-  name                 String    @db.VarChar(180)
-  category             String    @db.VarChar(100)
-  description          String    @default("") @db.Text
-  materials            String?   @db.VarChar(300)
-  priceInr             Int       @map("price_inr")
-  makingCostInr        Int?      @map("making_cost_inr")
-  hoursToMake          Float?    @map("hours_to_make")
-  craftExperienceYears Int?      @map("craft_experience_years")
-  quantityAvailable    Int       @default(1) @map("quantity_available")
-  minimumOrderQuantity Int       @default(1) @map("minimum_order_quantity")
-  leadTime             String?   @map("lead_time") @db.VarChar(120)
-  imageUrl             String?   @map("image_url") @db.Text
-  status               String    @default("published") @db.VarChar(20)
-  createdAt            DateTime  @default(now()) @map("created_at")
-  updatedAt            DateTime  @updatedAt @map("updated_at")
+  name                 String      @db.VarChar(180)
+  category             String      @db.VarChar(100)
+  description          String      @default("") @db.Text
+  materials            String?     @db.VarChar(300)
+  priceInr             Int         @map("price_inr")
+  makingCostInr        Int?        @map("making_cost_inr")
+  hoursToMake          Float?      @map("hours_to_make")
+  craftExperienceYears Int?        @map("craft_experience_years")
+  quantityAvailable    Int         @default(1) @map("quantity_available")
+  minimumOrderQuantity Int         @default(1) @map("minimum_order_quantity")
+  leadTime             String?     @map("lead_time") @db.VarChar(120)
+  imageUrl             String?     @map("image_url") @db.Text
+  status               String      @default("published") @db.VarChar(20)
+  createdAt            DateTime    @default(now()) @map("created_at")
+  updatedAt            DateTime    @updatedAt @map("updated_at")
   inquiries            Inquiry[]
+  cartItems            CartItem[]
+  orderItems           OrderItem[]
 
   @@index([status, createdAt])
   @@index([category])
@@ -49,21 +53,79 @@ model Product {
 }
 
 model Inquiry {
-  id         Int         @id @default(autoincrement())
-  productId  Int         @map("product_id")
-  product    Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
-  buyerId    String      @map("buyer_id") @db.VarChar(128)
-  buyer      UserProfile @relation("BuyerInquiries", fields: [buyerId], references: [clerkUserId], onDelete: Cascade)
-  sellerId   String      @map("seller_id") @db.VarChar(128)
-  seller     UserProfile @relation("SellerInquiries", fields: [sellerId], references: [clerkUserId], onDelete: Cascade)
-  quantity   Int         @default(1)
-  message    String      @db.Text
-  status     String      @default("open") @db.VarChar(20)
-  sellerReply String?    @map("seller_reply") @db.Text
-  createdAt  DateTime    @default(now()) @map("created_at")
-  repliedAt  DateTime?   @map("replied_at")
+  id          Int         @id @default(autoincrement())
+  productId   Int         @map("product_id")
+  product     Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  buyerId     String      @map("buyer_id") @db.VarChar(128)
+  buyer       UserProfile @relation("BuyerInquiries", fields: [buyerId], references: [clerkUserId], onDelete: Cascade)
+  sellerId    String      @map("seller_id") @db.VarChar(128)
+  seller      UserProfile @relation("SellerInquiries", fields: [sellerId], references: [clerkUserId], onDelete: Cascade)
+  quantity    Int         @default(1)
+  message     String      @db.Text
+  status      String      @default("open") @db.VarChar(20)
+  sellerReply String?     @map("seller_reply") @db.Text
+  createdAt   DateTime    @default(now()) @map("created_at")
+  repliedAt   DateTime?   @map("replied_at")
 
   @@index([buyerId, createdAt])
   @@index([sellerId, createdAt])
   @@map("inquiries")
+}
+
+// ── Cart ─────────────────────────────────────────────────────────────────────
+
+model Cart {
+  id        Int        @id @default(autoincrement())
+  userId    String     @unique @map("user_id") @db.VarChar(128)
+  user      UserProfile @relation(fields: [userId], references: [clerkUserId], onDelete: Cascade)
+  items     CartItem[]
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
+
+  @@map("carts")
+}
+
+model CartItem {
+  id        Int      @id @default(autoincrement())
+  cartId    Int      @map("cart_id")
+  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId Int      @map("product_id")
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  quantity  Int      @default(1)
+  addedAt   DateTime @default(now()) @map("added_at")
+
+  @@unique([cartId, productId])
+  @@map("cart_items")
+}
+
+// ── Orders ───────────────────────────────────────────────────────────────────
+
+model Order {
+  id              Int         @id @default(autoincrement())
+  buyerId         String      @map("buyer_id") @db.VarChar(128)
+  buyer           UserProfile @relation("BuyerOrders", fields: [buyerId], references: [clerkUserId], onDelete: Cascade)
+  status          String      @default("pending") @db.VarChar(20)
+  totalAmountInr  Int         @map("total_amount_inr")
+  shippingAddress String?     @map("shipping_address") @db.Text
+  notes           String?     @db.Text
+  items           OrderItem[]
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
+
+  @@index([buyerId, createdAt])
+  @@map("orders")
+}
+
+model OrderItem {
+  id         Int      @id @default(autoincrement())
+  orderId    Int      @map("order_id")
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId  Int      @map("product_id")
+  product    Product  @relation(fields: [productId], references: [id])
+  sellerName String?  @map("seller_name") @db.VarChar(160)
+  productName String  @map("product_name") @db.VarChar(180)
+  quantity   Int
+  priceInr   Int      @map("price_inr")
+
+  @@map("order_items")
 }
