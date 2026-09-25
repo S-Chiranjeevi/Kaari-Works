@@ -1,7 +1,7 @@
 "use client";
 
-import { FormEvent, useEffect, useRef, useState } from "react";
-import { Bot, MessageCircle, Send, X } from "lucide-react";
+import { FormEvent, useEffect, useRef, useState, useCallback } from "react";
+import { Bot, MessageCircle, Send, Volume2, VolumeX, X } from "lucide-react";
 import { useLang } from "@/lib/i18n";
 
 type Message = { role: "user" | "model"; text: string };
@@ -11,12 +11,45 @@ type ListingContext = {
   hours_to_make?: number | null; craft_experience_years?: number | null; lead_time?: string | null;
 };
 
+// Map our language codes to BCP-47 locale codes for SpeechSynthesis
+const LANG_LOCALE: Record<string, string> = {
+  en: "en-IN",
+  hi: "hi-IN",
+  ta: "ta-IN",
+  te: "te-IN",
+};
+
+function speak(text: string, locale: string) {
+  if (typeof window === "undefined" || !window.speechSynthesis) return;
+  window.speechSynthesis.cancel(); // stop any ongoing speech
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = locale;
+  utterance.rate = 0.92;
+  utterance.pitch = 1;
+
+  // Try to pick a voice matching the locale
+  const voices = window.speechSynthesis.getVoices();
+  const match =
+    voices.find((v) => v.lang === locale) ||
+    voices.find((v) => v.lang.startsWith(locale.split("-")[0]));
+  if (match) utterance.voice = match;
+
+  window.speechSynthesis.speak(utterance);
+}
+
+function stopSpeaking() {
+  if (typeof window !== "undefined" && window.speechSynthesis) {
+    window.speechSynthesis.cancel();
+  }
+}
+
 export default function BuyerEstimateChat() {
   const { t, lang } = useLang();
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const [translating, setTranslating] = useState(false);
+  const [audioOn, setAudioOn] = useState(true);
   const [listing, setListing] = useState<ListingContext | null>(null);
   const [messages, setMessages] = useState<Message[]>([
     { role: "model", text: t("chatWelcome") },
@@ -24,18 +57,31 @@ export default function BuyerEstimateChat() {
   const bottom = useRef<HTMLDivElement>(null);
   const prevLang = useRef(lang);
 
+  // Speak a model reply if audio is on
+  const speakIfEnabled = useCallback((text: string) => {
+    if (audioOn) speak(text, LANG_LOCALE[lang] ?? "en-IN");
+  }, [audioOn, lang]);
+
+  // Stop speaking when chat is closed
+  useEffect(() => {
+    if (!open) stopSpeaking();
+  }, [open]);
+
+  // Stop speaking when language changes
+  useEffect(() => {
+    stopSpeaking();
+  }, [lang]);
+
   // When language changes, retranslate all existing model messages
   useEffect(() => {
     if (prevLang.current === lang) return;
     prevLang.current = lang;
 
-    // Always update the welcome message if it's the only message
     if (messages.length === 1 && messages[0].role === "model") {
       setMessages([{ role: "model", text: t("chatWelcome") }]);
       return;
     }
 
-    // Retranslate all model messages in the history
     const modelMessages = messages.filter((m) => m.role === "model");
     if (modelMessages.length === 0) return;
 
@@ -63,9 +109,7 @@ export default function BuyerEstimateChat() {
       setMessages((prev) => {
         let modelIdx = 0;
         return prev.map((m) => {
-          if (m.role === "model") {
-            return { ...m, text: translated[modelIdx++] ?? m.text };
-          }
+          if (m.role === "model") return { ...m, text: translated[modelIdx++] ?? m.text };
           return m;
         });
       });
@@ -80,20 +124,20 @@ export default function BuyerEstimateChat() {
       if (!product?.name || !product.category) return;
       setListing(product);
       setOpen(true);
-      setMessages((previous) => [
-        ...previous,
-        { role: "model", text: t("chatProductLoaded", { name: product.name }) },
-      ]);
+      const msg = t("chatProductLoaded", { name: product.name });
+      setMessages((previous) => [...previous, { role: "model", text: msg }]);
+      speakIfEnabled(msg);
     };
     window.addEventListener("kaari:estimate-product", selectProduct);
     return () => window.removeEventListener("kaari:estimate-product", selectProduct);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lang]);
+  }, [lang, speakIfEnabled]);
 
   async function send(event: FormEvent) {
     event.preventDefault();
     const text = draft.trim();
     if (!text || busy) return;
+    stopSpeaking();
     const conversation = [...messages, { role: "user" as const, text }];
     setMessages(conversation);
     setDraft("");
@@ -106,13 +150,21 @@ export default function BuyerEstimateChat() {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.detail || t("chatError"));
-      setMessages([...conversation, { role: "model", text: data.reply }]);
+      const reply = data.reply as string;
+      setMessages([...conversation, { role: "model", text: reply }]);
+      speakIfEnabled(reply);
     } catch (error) {
-      setMessages([...conversation, { role: "model", text: error instanceof Error ? error.message : t("chatError") }]);
+      const errMsg = error instanceof Error ? error.message : t("chatError");
+      setMessages([...conversation, { role: "model", text: errMsg }]);
     } finally {
       setBusy(false);
       window.setTimeout(() => bottom.current?.scrollIntoView({ behavior: "smooth" }), 50);
     }
+  }
+
+  function toggleAudio() {
+    if (audioOn) stopSpeaking();
+    setAudioOn((v) => !v);
   }
 
   return <div className="buyer-chat">
@@ -120,6 +172,16 @@ export default function BuyerEstimateChat() {
       <header className="buyer-chat-head">
         <span className="buyer-chat-mark"><Bot size={19}/></span>
         <div><strong>{t("chatTitle")}</strong><small>{t("chatSubtitle")}</small></div>
+        <button
+          type="button"
+          className="buyer-chat-close"
+          onClick={toggleAudio}
+          aria-label={audioOn ? "Mute voice" : "Unmute voice"}
+          title={audioOn ? "Mute voice" : "Unmute voice"}
+          style={{ marginLeft: "auto" }}
+        >
+          {audioOn ? <Volume2 size={17}/> : <VolumeX size={17}/>}
+        </button>
         <button type="button" className="buyer-chat-close" onClick={() => setOpen(false)} aria-label={t("chatClose")}><X size={18}/></button>
       </header>
       {listing && <div className="buyer-chat-selected">
@@ -128,14 +190,18 @@ export default function BuyerEstimateChat() {
       </div>}
       <div className="buyer-chat-messages" aria-live="polite">
         {messages.map((message, index) => (
-          <div key={index} className={`buyer-chat-message ${message.role === "user" ? "from-user" : "from-guide"}`}>
+          <div
+            key={index}
+            className={`buyer-chat-message ${message.role === "user" ? "from-user" : "from-guide"}`}
+            onClick={() => message.role === "model" && speakIfEnabled(message.text)}
+            style={message.role === "model" ? { cursor: "pointer" } : undefined}
+            title={message.role === "model" ? "Click to hear again" : undefined}
+          >
             {message.text}
           </div>
         ))}
         {(busy || translating) && (
-          <div className="buyer-chat-message from-guide">
-            {translating ? t("chatThinking") : t("chatThinking")}
-          </div>
+          <div className="buyer-chat-message from-guide">{t("chatThinking")}</div>
         )}
         <div ref={bottom}/>
       </div>
