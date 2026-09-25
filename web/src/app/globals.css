@@ -28,3 +28,5 @@
 .voice-nav-transcript{position:absolute;top:calc(100% + 8px);right:0;background:#17322f;color:#e8f0ec;font-size:11px;padding:5px 10px;border-radius:8px;white-space:nowrap;max-width:220px;overflow:hidden;text-overflow:ellipsis;z-index:50;pointer-events:none}
 .voice-nav-toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#0d6654;color:#fff;font-size:13px;font-weight:600;padding:10px 18px;border-radius:10px;z-index:100;box-shadow:0 4px 20px #17322f40;animation:voice-toast-in .2s ease;pointer-events:none}
 @keyframes voice-toast-in{from{opacity:0;transform:translateX(-50%) translateY(8px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+
+.buyer-chat-mic{position:relative;width:34px;height:34px;border:0;border-radius:10px;background:#eaf5ef;color:#0d6654;display:grid;place-items:center;cursor:pointer;flex-shrink:0;transition:background .15s}.buyer-chat-mic:hover{background:#d4ede0}.buyer-chat-mic--active{background:#13866c;color:#fff}.chat-textarea--listening{border-color:#13866c!important;outline:none}

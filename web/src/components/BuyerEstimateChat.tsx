@@ -1,9 +1,17 @@
 "use client";
 
 import { FormEvent, useEffect, useRef, useState, useCallback } from "react";
-import { Bot, MessageCircle, Send, Volume2, VolumeX, X } from "lucide-react";
+import { Bot, MessageCircle, Mic, MicOff, Send, Volume2, VolumeX, X } from "lucide-react";
 import { useLang } from "@/lib/i18n";
 import { LANG_LOCALE } from "@/lib/voiceCommands";
+
+// Extend window type for webkit prefix
+declare global {
+  interface Window {
+    SpeechRecognition: typeof SpeechRecognition;
+    webkitSpeechRecognition: typeof SpeechRecognition;
+  }
+}
 
 type Message = { role: "user" | "model"; text: string };
 type ListingContext = {
@@ -12,29 +20,18 @@ type ListingContext = {
   hours_to_make?: number | null; craft_experience_years?: number | null; lead_time?: string | null;
 };
 
-// Map our language codes to BCP-47 locale codes for SpeechSynthesis
-const LANG_LOCALE: Record<string, string> = {
-  en: "en-IN",
-  hi: "hi-IN",
-  ta: "ta-IN",
-  te: "te-IN",
-};
-
 function speak(text: string, locale: string) {
   if (typeof window === "undefined" || !window.speechSynthesis) return;
-  window.speechSynthesis.cancel(); // stop any ongoing speech
+  window.speechSynthesis.cancel();
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.lang = locale;
   utterance.rate = 0.92;
   utterance.pitch = 1;
-
-  // Try to pick a voice matching the locale
   const voices = window.speechSynthesis.getVoices();
   const match =
     voices.find((v) => v.lang === locale) ||
     voices.find((v) => v.lang.startsWith(locale.split("-")[0]));
   if (match) utterance.voice = match;
-
   window.speechSynthesis.speak(utterance);
 }
 
@@ -51,29 +48,92 @@ export default function BuyerEstimateChat() {
   const [busy, setBusy] = useState(false);
   const [translating, setTranslating] = useState(false);
   const [audioOn, setAudioOn] = useState(true);
+  const [micListening, setMicListening] = useState(false);
   const [listing, setListing] = useState<ListingContext | null>(null);
   const [messages, setMessages] = useState<Message[]>([
     { role: "model", text: t("chatWelcome") },
   ]);
   const bottom = useRef<HTMLDivElement>(null);
   const prevLang = useRef(lang);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
-  // Speak a model reply if audio is on
+  const locale = LANG_LOCALE[lang] ?? "en-IN";
+
   const speakIfEnabled = useCallback((text: string) => {
-    if (audioOn) speak(text, LANG_LOCALE[lang] ?? "en-IN");
-  }, [audioOn, lang]);
+    if (audioOn) speak(text, locale);
+  }, [audioOn, locale]);
 
-  // Stop speaking when chat is closed
-  useEffect(() => {
-    if (!open) stopSpeaking();
-  }, [open]);
-
-  // Stop speaking when language changes
-  useEffect(() => {
+  // ── Voice input for chatbot ──────────────────────────────────────────────
+  function startVoiceInput() {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) return;
     stopSpeaking();
-  }, [lang]);
 
-  // When language changes, retranslate all existing model messages
+    const recognition = new SR();
+    recognition.lang = locale;
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.maxAlternatives = 1;
+
+    recognition.onstart = () => setMicListening(true);
+
+    recognition.onresult = (event) => {
+      let interim = "";
+      let final = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const text = event.results[i][0].transcript;
+        if (event.results[i].isFinal) final += text;
+        else interim += text;
+      }
+      // Show interim in textarea as user speaks
+      setDraft(final || interim);
+    };
+
+    recognition.onend = () => {
+      setMicListening(false);
+      recognitionRef.current = null;
+      // Auto-submit if we got a final transcript
+      setDraft((current) => {
+        if (current.trim()) {
+          // Trigger submit after state update
+          setTimeout(() => formRef.current?.requestSubmit(), 50);
+        }
+        return current;
+      });
+    };
+
+    recognition.onerror = (event) => {
+      if (event.error !== "aborted" && event.error !== "no-speech") {
+        console.error("Voice input error:", event.error);
+      }
+      setMicListening(false);
+    };
+
+    recognitionRef.current = recognition;
+    recognition.start();
+  }
+
+  function stopVoiceInput() {
+    recognitionRef.current?.stop();
+    recognitionRef.current = null;
+    setMicListening(false);
+  }
+
+  function toggleMic() {
+    if (micListening) stopVoiceInput();
+    else startVoiceInput();
+  }
+
+  // Stop voice input when chat closes or language changes
+  useEffect(() => { if (!open) stopVoiceInput(); }, [open]);
+  useEffect(() => { stopVoiceInput(); }, [lang]);
+
+  // Stop speaking when chat closes or language changes
+  useEffect(() => { if (!open) stopSpeaking(); }, [open]);
+  useEffect(() => { stopSpeaking(); }, [lang]);
+
+  // Retranslate history on language change
   useEffect(() => {
     if (prevLang.current === lang) return;
     prevLang.current = lang;
@@ -95,24 +155,17 @@ export default function BuyerEstimateChat() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               message: `Translate this text to the target language, keeping the same meaning and tone. Return only the translated text, nothing else: "${msg.text}"`,
-              history: [],
-              listing: null,
-              lang,
+              history: [], listing: null, lang,
             }),
           });
           const data = await res.json();
           return res.ok ? data.reply : msg.text;
-        } catch {
-          return msg.text;
-        }
+        } catch { return msg.text; }
       })
     ).then((translated) => {
       setMessages((prev) => {
-        let modelIdx = 0;
-        return prev.map((m) => {
-          if (m.role === "model") return { ...m, text: translated[modelIdx++] ?? m.text };
-          return m;
-        });
+        let idx = 0;
+        return prev.map((m) => m.role === "model" ? { ...m, text: translated[idx++] ?? m.text } : m);
       });
       setTranslating(false);
     });
@@ -150,6 +203,7 @@ export default function BuyerEstimateChat() {
     const text = draft.trim();
     if (!text || busy) return;
     stopSpeaking();
+    stopVoiceInput();
     const conversation = [...messages, { role: "user" as const, text }];
     setMessages(conversation);
     setDraft("");
@@ -184,14 +238,9 @@ export default function BuyerEstimateChat() {
       <header className="buyer-chat-head">
         <span className="buyer-chat-mark"><Bot size={19}/></span>
         <div><strong>{t("chatTitle")}</strong><small>{t("chatSubtitle")}</small></div>
-        <button
-          type="button"
-          className="buyer-chat-close"
-          onClick={toggleAudio}
-          aria-label={audioOn ? "Mute voice" : "Unmute voice"}
-          title={audioOn ? "Mute voice" : "Unmute voice"}
-          style={{ marginLeft: "auto" }}
-        >
+        <button type="button" className="buyer-chat-close" onClick={toggleAudio}
+          aria-label={audioOn ? "Mute voice" : "Unmute voice"} title={audioOn ? "Mute voice" : "Unmute voice"}
+          style={{ marginLeft: "auto" }}>
           {audioOn ? <Volume2 size={17}/> : <VolumeX size={17}/>}
         </button>
         <button type="button" className="buyer-chat-close" onClick={() => setOpen(false)} aria-label={t("chatClose")}><X size={18}/></button>
@@ -202,31 +251,37 @@ export default function BuyerEstimateChat() {
       </div>}
       <div className="buyer-chat-messages" aria-live="polite">
         {messages.map((message, index) => (
-          <div
-            key={index}
+          <div key={index}
             className={`buyer-chat-message ${message.role === "user" ? "from-user" : "from-guide"}`}
             onClick={() => message.role === "model" && speakIfEnabled(message.text)}
             style={message.role === "model" ? { cursor: "pointer" } : undefined}
-            title={message.role === "model" ? "Click to hear again" : undefined}
-          >
+            title={message.role === "model" ? "Click to hear again" : undefined}>
             {message.text}
           </div>
         ))}
-        {(busy || translating) && (
-          <div className="buyer-chat-message from-guide">{t("chatThinking")}</div>
-        )}
+        {(busy || translating) && <div className="buyer-chat-message from-guide">{t("chatThinking")}</div>}
         <div ref={bottom}/>
       </div>
       <div className="buyer-chat-disclaimer">{t("chatDisclaimer")}</div>
-      <form className="buyer-chat-compose" onSubmit={send}>
+      <form ref={formRef} className="buyer-chat-compose" onSubmit={send}>
         <textarea
           aria-label={t("chatPlaceholder")}
           rows={2}
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
-          placeholder={t("chatPlaceholder")}
+          placeholder={micListening ? "🎤 Listening…" : t("chatPlaceholder")}
           maxLength={1200}
+          className={micListening ? "chat-textarea--listening" : ""}
         />
+        {/* Mic button for voice input */}
+        <button type="button"
+          className={`buyer-chat-mic ${micListening ? "buyer-chat-mic--active" : ""}`}
+          onClick={toggleMic}
+          aria-label={micListening ? "Stop voice input" : "Speak your question"}
+          title={micListening ? "Stop" : "Ask by voice"}>
+          {micListening ? <MicOff size={15}/> : <Mic size={15}/>}
+          {micListening && <span className="voice-nav-pulse"/>}
+        </button>
         <button type="submit" aria-label={t("chatSend")} disabled={busy || translating || !draft.trim()}><Send size={17}/></button>
       </form>
     </section>}
