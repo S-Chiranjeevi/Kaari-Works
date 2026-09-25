@@ -9,6 +9,7 @@ import LanguageSwitcher from "@/components/LanguageSwitcher";
 import VoiceNav from "@/components/VoiceNav";
 import ProductDetailModal, { type ProductDetail } from "@/components/ProductDetailModal";
 import CartSidebar, { type Cart } from "@/components/CartSidebar";
+import CheckoutSidebar, { type CheckoutItem } from "@/components/CheckoutSidebar";
 import { LangProvider, useLang } from "@/lib/i18n";
 import { VoiceAction } from "@/lib/voiceCommands";
 
@@ -81,6 +82,7 @@ function MarketplaceInner() {
   const [contactMessage, setContactMessage] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<ProductDetail | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
+  const [checkoutItems, setCheckoutItems] = useState<CheckoutItem[] | null>(null);
 
   const api = useCallback(async (path: string, init: RequestInit = {}, authenticated = false) => {
     const headers = new Headers(init.headers);
@@ -181,11 +183,25 @@ function MarketplaceInner() {
   }
 
   async function buyNow(productId: number, quantity: number) {
-    const shipping = window.prompt("Enter your shipping address:");
-    if (!shipping?.trim()) return;
-    await api("/api/orders", { method: "POST", body: JSON.stringify({ items: [{ product_id: productId, quantity }], shipping_address: shipping }) }, true);
-    await loadOrders();
+    const p = products.find(prod => prod.id === productId) || selectedProduct;
+    if (!p) return;
+    setCheckoutItems([{
+      product_id: productId,
+      product_name: p.name,
+      quantity,
+      price_inr: p.price_inr,
+    }]);
     setSelectedProduct(null);
+  }
+
+  async function confirmBuyNow(shippingAddress: string, notes: string) {
+    if (!checkoutItems) return;
+    await api("/api/orders", {
+      method: "POST",
+      body: JSON.stringify({ items: checkoutItems.map(i => ({ product_id: i.product_id, quantity: i.quantity })), shipping_address: shippingAddress, notes }),
+    }, true);
+    await loadOrders();
+    setCheckoutItems(null);
     flash("✓ Order placed! Check the Orders tab.");
     setTab("inquiries");
   }
@@ -389,7 +405,7 @@ function MarketplaceInner() {
                   <div className="product-body">
                     <h3>{product.name}</h3>
                     <div className="seller-name">{t("madeBy")} {product.seller_name || t("independentArtisan")}</div>
-                    <p className="product-description">{product.description || t("defaultDescription")}</p>
+                    <p className="product-description">{product.description || `Handmade ${product.category.toLowerCase()}.`}</p>
                     <div className="product-foot">
                       <div className="product-price">₹{product.price_inr.toLocaleString("en-IN")}<small>{t("perPieceMin")} {product.minimum_order_quantity}</small></div>
                       <button className="button" onClick={(e) => { e.stopPropagation(); openProduct(product.id); }}>View</button>
@@ -509,6 +525,16 @@ function MarketplaceInner() {
         onClose={() => setSelectedProduct(null)}
         onAddToCart={addToCart}
         onBuyNow={buyNow}
+      />
+    )}
+
+    {/* ── Checkout sidebar (Buy Now) ── */}
+    {checkoutItems && (
+      <CheckoutSidebar
+        items={checkoutItems}
+        onClose={() => setCheckoutItems(null)}
+        onConfirm={confirmBuyNow}
+        title="Buy Now — Place Order"
       />
     )}
 
