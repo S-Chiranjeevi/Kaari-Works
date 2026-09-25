@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
   ].join("\n");
 
   try {
-    const model = process.env.GEMINI_MODEL || "gemini-3.8-flash";
+    const model = process.env.GEMINI_MODEL || "gemini-2.5-flash-lite";
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
     const result = await response.json();
     if (!response.ok) {
       console.error("Gemini buyer guide failed", response.status, result?.error?.message);
-      return NextResponse.json({ detail: "The buyer guide could not respond. Check Gemini model access and try again." }, { status: 502 });
+      return NextResponse.json({ detail: `The buyer guide could not respond: ${result?.error?.message || "Check Gemini model access and try again."}` }, { status: 502 });
     }
     const reply = result.candidates?.[0]?.content?.parts?.map((part: { text?: string }) => part.text || "").join("").trim();
     if (!reply) return NextResponse.json({ detail: "Gemini returned an empty reply. Please try again." }, { status: 502 });
