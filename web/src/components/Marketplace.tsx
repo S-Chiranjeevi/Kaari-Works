@@ -174,8 +174,8 @@ function MarketplaceInner() {
         <button className="nav-link" onClick={() => setTab("inquiries")}>{t("navEnquiries")}</button>
         <LanguageSwitcher />
         <SignedOut>
-          <SignInButton mode="modal"><button className="button outline">{t("navSignIn")}</button></SignInButton>
-          <SignUpButton mode="modal"><button className="button">{t("navJoin")}</button></SignUpButton>
+          <SignInButton mode="redirect"><button className="button outline">{t("navSignIn")}</button></SignInButton>
+          <SignUpButton mode="redirect"><button className="button">{t("navJoin")}</button></SignUpButton>
         </SignedOut>
         <SignedIn><UserButton /></SignedIn>
       </nav>
@@ -250,7 +250,7 @@ function MarketplaceInner() {
         <div className="form-card seller-signin-card">
           <h2>{t("sellSignInCard")}</h2>
           <p>{t("sellSignInNote")}</p>
-          <SignInButton mode="modal"><button className="button">{t("sellSignInBtn")}</button></SignInButton>
+          <SignInButton mode="redirect"><button className="button">{t("sellSignInBtn")}</button></SignInButton>
         </div>
       </SignedOut>
       <SignedIn>
@@ -281,7 +281,7 @@ function MarketplaceInner() {
       <SignedOut>
         <div className="form-card">
           <p>{t("enquiriesSignIn")}</p>
-          <SignInButton mode="modal"><button className="button">{t("enquiriesSignInBtn")}</button></SignInButton>
+          <SignInButton mode="redirect"><button className="button">{t("enquiriesSignInBtn")}</button></SignInButton>
         </div>
       </SignedOut>
       <SignedIn>
@@ -317,7 +317,7 @@ function MarketplaceInner() {
         </form>
         <SignedOut>
           <p className="form-note">{t("contactSignInNote")}</p>
-          <SignInButton mode="modal"><button className="button outline">{t("contactSignInBtn")}</button></SignInButton>
+          <SignInButton mode="redirect"><button className="button outline">{t("contactSignInBtn")}</button></SignInButton>
         </SignedOut>
       </section>
     </div>}
