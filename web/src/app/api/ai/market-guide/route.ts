@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
   }
 
   const lang = typeof body?.lang === "string" ? body.lang : "en";
-  const langNames: Record<string, string> = { en: "English", hi: "Hindi", ta: "Tamil", te: "Telugu" };
+  const langNames: Record<string, string> = { en: "English", hi: "Hindi", ta: "Tamil", te: "Telugu", kn: "Kannada" };
   const replyLang = langNames[lang] ?? "English";
 
   const systemPrompt = [

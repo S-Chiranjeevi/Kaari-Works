@@ -7,6 +7,7 @@ export const LANG_LOCALE: Record<string, string> = {
   hi: "hi-IN",
   ta: "ta-IN",
   te: "te-IN",
+  kn: "kn-IN",
 };
 
 export type VoiceAction =
@@ -24,22 +25,21 @@ export type VoiceAction =
 
 export type VoiceCommand = {
   action: VoiceAction;
-  phrases: string[]; // lowercase match phrases
+  phrases: string[];
 };
 
-// Feedback messages spoken back to the user after a command fires
 export const VOICE_FEEDBACK: Record<VoiceAction, Record<string, string>> = {
-  "nav:discover":    { en: "Opening Discover",         hi: "खोजें खुल रहा है",          ta: "கண்டறிகிறோம்",         te: "కనుగొంటున్నాము" },
-  "nav:sell":        { en: "Opening For Artisans",      hi: "कारीगर अनुभाग खुल रहा है", ta: "கலைஞர் பகுதி திறக்கிறது", te: "కళాకారుల విభాగం తెరవబడుతోంది" },
-  "nav:inquiries":   { en: "Opening Enquiries",         hi: "पूछताछ खुल रही है",         ta: "விசாரணைகள் திறக்கின்றன",  te: "విచారణలు తెరవబడుతున్నాయి" },
-  "nav:signin":      { en: "Going to Sign In",          hi: "साइन इन पेज खुल रहा है",   ta: "உள்நுழைவு பக்கம்",       te: "సైన్ ఇన్ పేజీకి వెళ్తున్నాము" },
-  "nav:signup":      { en: "Going to Sign Up",          hi: "साइन अप पेज खुल रहा है",   ta: "பதிவு பக்கம்",            te: "సైన్ అప్ పేజీకి వెళ్తున్నాము" },
-  "chat:open":       { en: "Opening buyer guide",       hi: "खरीदार मार्गदर्शक खुल रहा है", ta: "வாங்குபவர் வழிகாட்டி திறக்கிறது", te: "కొనుగోలుదారు మార్గదర్శి తెరవబడుతోంది" },
-  "chat:close":      { en: "Closing buyer guide",       hi: "मार्गदर्शक बंद हो रहा है",  ta: "வழிகாட்டி மூடுகிறது",    te: "మార్గదర్శి మూసివేయబడుతోంది" },
-  "scroll:top":      { en: "Going to top",              hi: "ऊपर जा रहे हैं",            ta: "மேலே செல்கிறோம்",        te: "పైకి వెళ్తున్నాము" },
-  "scroll:catalogue":{ en: "Going to catalogue",        hi: "सूची पर जा रहे हैं",        ta: "பட்டியலுக்கு செல்கிறோம்", te: "జాబితాకు వెళ్తున్నాము" },
-  "search:focus":    { en: "Search box ready",          hi: "खोज बॉक्स तैयार है",        ta: "தேடல் பெட்டி தயார்",      te: "శోధన పెట్టె సిద్ధంగా ఉంది" },
-  "help":            { en: "Available commands: Discover, Artisans, Enquiries, Search, Top, Chat", hi: "उपलब्ध आदेश: खोजें, कारीगर, पूछताछ, खोज, ऊपर, चैट", ta: "கட்டளைகள்: கண்டறி, கலைஞர், விசாரணை, தேடு, மேல், அரட்டை", te: "ఆదేశాలు: కనుగొను, కళాకారుడు, విచారణ, వెతకు, పైకి, చాట్" },
+  "nav:discover":    { en: "Opening Discover", hi: "खोजें खुल रहा है", ta: "கண்டறிகிறோம்", te: "కనుగొంటున్నాము", kn: "ಹುಡುಕಲಾಗುತ್ತಿದೆ" },
+  "nav:sell":        { en: "Opening For Artisans", hi: "कारीगर अनुभाग खुल रहा है", ta: "கலைஞர் பகுதி திறக்கிறது", te: "కళాకారుల విభాగం తెరవబడుతోంది", kn: "ಕಲಾವಿದ ವಿಭಾಗ ತೆರೆಯಲಾಗುತ್ತಿದೆ" },
+  "nav:inquiries":   { en: "Opening Enquiries", hi: "पूछताछ खुल रही है", ta: "விசாரணைகள் திறக்கின்றன", te: "విచారణలు తెరవబడుతున్నాయి", kn: "ವಿಚಾರಣೆಗಳು ತೆರೆಯಲಾಗುತ್ತಿದೆ" },
+  "nav:signin":      { en: "Going to Sign In", hi: "साइन इन पेज खुल रहा है", ta: "உள்நுழைவு பக்கம்", te: "సైన్ ఇన్ పేజీకి వెళ్తున్నాము", kn: "ಸೈನ್ ಇನ್ ಪುಟಕ್ಕೆ ಹೋಗುತ್ತಿದ್ದೇವೆ" },
+  "nav:signup":      { en: "Going to Sign Up", hi: "साइन अप पेज खुल रहा है", ta: "பதிவு பக்கம்", te: "సైన్ అప్ పేజీకి వెళ్తున్నాము", kn: "ಸೈನ್ ಅಪ್ ಪುಟಕ್ಕೆ ಹೋಗುತ್ತಿದ್ದೇವೆ" },
+  "chat:open":       { en: "Opening buyer guide", hi: "खरीदार मार्गदर्शक खुल रहा है", ta: "வாங்குபவர் வழிகாட்டி திறக்கிறது", te: "కొనుగోలుదారు మార్గదర్శి తెరవబడుతోంది", kn: "ಖರೀದಿದಾರ ಮಾರ್ಗದರ್ಶಿ ತೆರೆಯಲಾಗುತ್ತಿದೆ" },
+  "chat:close":      { en: "Closing buyer guide", hi: "मार्गदर्शक बंद हो रहा है", ta: "வழிகாட்டி மூடுகிறது", te: "మార్గదర్శి మూసివేయబడుతోంది", kn: "ಮಾರ್ಗದರ್ಶಿ ಮುಚ್ಚಲಾಗುತ್ತಿದೆ" },
+  "scroll:top":      { en: "Going to top", hi: "ऊपर जा रहे हैं", ta: "மேலே செல்கிறோம்", te: "పైకి వెళ్తున్నాము", kn: "ಮೇಲೆ ಹೋಗುತ್ತಿದ್ದೇವೆ" },
+  "scroll:catalogue":{ en: "Going to catalogue", hi: "सूची पर जा रहे हैं", ta: "பட்டியலுக்கு செல்கிறோம்", te: "జాబితాకు వెళ్తున్నాము", kn: "ಪಟ್ಟಿಗೆ ಹೋಗುತ್ತಿದ್ದೇವೆ" },
+  "search:focus":    { en: "Search box ready", hi: "खोज बॉक्स तैयार है", ta: "தேடல் பெட்டி தயார்", te: "శోధన పెట్టె సిద్ధంగా ఉంది", kn: "ಹುಡುಕಾಟ ಪೆಟ್ಟಿಗೆ ಸಿದ್ಧವಾಗಿದೆ" },
+  "help":            { en: "Commands: Discover, Artisans, Enquiries, Search, Top, Chat", hi: "आदेश: खोजें, कारीगर, पूछताछ, खोज, ऊपर, चैट", ta: "கட்டளைகள்: கண்டறி, கலைஞர், விசாரணை, தேடு, மேல், அரட்டை", te: "ఆదేశాలు: కనుగొను, కళాకారుడు, విచారణ, వెతకు, పైకి, చాట్", kn: "ಆದೇಶಗಳು: ಹುಡುಕಿ, ಕಲಾವಿದ, ವಿಚಾರಣೆ, ಹುಡುಕು, ಮೇಲೆ, ಚಾಟ್" },
 };
 
 export const VOICE_COMMANDS: Record<string, VoiceCommand[]> = {
@@ -52,13 +52,13 @@ export const VOICE_COMMANDS: Record<string, VoiceCommand[]> = {
     { action: "chat:open",        phrases: ["open chat", "open guide", "buyer guide", "ask about cost", "cost estimate", "price estimate"] },
     { action: "chat:close",       phrases: ["close chat", "close guide", "hide chat"] },
     { action: "scroll:top",       phrases: ["go to top", "scroll up", "top of page", "back to top"] },
-    { action: "scroll:catalogue", phrases: ["go to catalogue", "show catalogue", "scroll down", "show products", "catalogue"] },
+    { action: "scroll:catalogue", phrases: ["go to catalogue", "show catalogue", "scroll down", "catalogue"] },
     { action: "search:focus",     phrases: ["search", "find", "look for", "search for"] },
     { action: "help",             phrases: ["help", "commands", "what can i say", "voice commands"] },
   ],
   hi: [
-    { action: "nav:discover",     phrases: ["खोजें", "होम", "घर जाएं", "उत्पाद दिखाएं", "ब्राउज़ करें"] },
-    { action: "nav:sell",         phrases: ["बेचें", "कारीगर", "कारीगरों के लिए", "लिस्टिंग बनाएं", "उत्पाद जोड़ें"] },
+    { action: "nav:discover",     phrases: ["खोजें", "होम", "घर जाएं", "उत्पाद दिखाएं", "ब्राउज़"] },
+    { action: "nav:sell",         phrases: ["बेचें", "कारीगर", "कारीगरों के लिए", "लिस्टिंग बनाएं"] },
     { action: "nav:inquiries",    phrases: ["पूछताछ", "संदेश", "ऑर्डर", "मेरे ऑर्डर"] },
     { action: "nav:signin",       phrases: ["साइन इन", "लॉगिन", "लॉग इन"] },
     { action: "nav:signup",       phrases: ["साइन अप", "रजिस्टर", "खाता बनाएं", "जुड़ें"] },
@@ -83,7 +83,7 @@ export const VOICE_COMMANDS: Record<string, VoiceCommand[]> = {
     { action: "help",             phrases: ["உதவி", "கட்டளைகள்"] },
   ],
   te: [
-    { action: "nav:discover",     phrases: ["కనుగొను", "హోమ్", "ఉత్పత్తులు చూపు", "బ్రౌజ్ చేయి"] },
+    { action: "nav:discover",     phrases: ["కనుగొను", "హోమ్", "ఉత్పత్తులు చూపు", "బ్రౌజ్"] },
     { action: "nav:sell",         phrases: ["అమ్ము", "కళాకారుడు", "కళాకారులకు", "జాబితా సృష్టించు"] },
     { action: "nav:inquiries",    phrases: ["విచారణలు", "సందేశాలు", "ఆర్డర్లు"] },
     { action: "nav:signin",       phrases: ["సైన్ ఇన్", "లాగిన్"] },
@@ -94,6 +94,19 @@ export const VOICE_COMMANDS: Record<string, VoiceCommand[]> = {
     { action: "scroll:catalogue", phrases: ["జాబితాకు వెళ్ళు", "ఉత్పత్తులు చూపు"] },
     { action: "search:focus",     phrases: ["వెతుకు", "శోధించు"] },
     { action: "help",             phrases: ["సహాయం", "ఆదేశాలు"] },
+  ],
+  kn: [
+    { action: "nav:discover",     phrases: ["ಹುಡುಕಿ", "ಮನೆ", "ಉತ್ಪನ್ನಗಳು ತೋರಿಸು", "ಬ್ರೌಸ್"] },
+    { action: "nav:sell",         phrases: ["ಮಾರಾಟ", "ಕಲಾವಿದ", "ಕಲಾವಿದರಿಗೆ", "ಪಟ್ಟಿ ರಚಿಸು"] },
+    { action: "nav:inquiries",    phrases: ["ವಿಚಾರಣೆ", "ಸಂದೇಶಗಳು", "ಆರ್ಡರ್ಗಳು"] },
+    { action: "nav:signin",       phrases: ["ಸೈನ್ ಇನ್", "ಲಾಗಿನ್"] },
+    { action: "nav:signup",       phrases: ["ಸೈನ್ ಅಪ್", "ನೋಂದಣಿ", "ಸೇರು"] },
+    { action: "chat:open",        phrases: ["ಚಾಟ್ ತೆರೆ", "ಮಾರ್ಗದರ್ಶಿ ತೆರೆ", "ಬೆಲೆ ಕೇಳು"] },
+    { action: "chat:close",       phrases: ["ಚಾಟ್ ಮುಚ್ಚು", "ಮಾರ್ಗದರ್ಶಿ ಮುಚ್ಚು"] },
+    { action: "scroll:top",       phrases: ["ಮೇಲೆ ಹೋಗು", "ಮೇಲ್ಭಾಗಕ್ಕೆ ಹೋಗು"] },
+    { action: "scroll:catalogue", phrases: ["ಪಟ್ಟಿಗೆ ಹೋಗು", "ಉತ್ಪನ್ನಗಳು ತೋರಿಸು"] },
+    { action: "search:focus",     phrases: ["ಹುಡುಕು", "ಹುಡುಕಾಟ"] },
+    { action: "help",             phrases: ["ಸಹಾಯ", "ಆದೇಶಗಳು"] },
   ],
 };
 
