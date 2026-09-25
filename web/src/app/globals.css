@@ -12,7 +12,9 @@
 .lang-switcher{border:1px solid var(--line);border-radius:8px;background:var(--white);color:var(--ink);font-size:13px;padding:5px 9px;cursor:pointer;outline-color:var(--green)}.lang-switcher:hover{border-color:#93c6b5}
 
 .auth-page{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0d1412;gap:20px;padding:24px}
+.auth-page--light{background:#f2f7f4}
 .auth-brand{display:flex;align-items:center;gap:10px}
 .auth-brand-mark{font-size:32px;line-height:1;background:#13866c;border-radius:12px;width:48px;height:48px;display:grid;place-items:center;color:#fff;flex-shrink:0}
-.auth-brand-name{font-size:22px;font-weight:800;color:#fff;letter-spacing:-0.3px}
-.auth-brand-name .brand-accent{color:#4ec9a3}
+.auth-brand-name{font-size:22px;font-weight:800;color:#17322f;letter-spacing:-0.3px}
+.auth-brand-name .brand-accent{color:#13866c}
+.auth-welcome{font-size:20px;font-weight:700;color:#17322f;margin:0;letter-spacing:-0.2px}
