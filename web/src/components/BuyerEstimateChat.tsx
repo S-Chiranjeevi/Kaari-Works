@@ -95,7 +95,6 @@ export default function BuyerEstimateChat() {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
-  const [translating, setTranslating] = useState(false);
   const [audioOn, setAudioOn] = useState(true);
   const [micListening, setMicListening] = useState(false);
   const [listing, setListing] = useState<ListingContext | null>(null);
@@ -182,42 +181,15 @@ export default function BuyerEstimateChat() {
   useEffect(() => { if (!open) stopSpeaking(); }, [open]);
   useEffect(() => { stopSpeaking(); }, [lang]);
 
-  // Retranslate history on language change
+  // Update the welcome message locally; changing languages should not spend
+  // Gemini requests translating every message already in the conversation.
   useEffect(() => {
     if (prevLang.current === lang) return;
     prevLang.current = lang;
 
     if (messages.length === 1 && messages[0].role === "model") {
       setMessages([{ role: "model", text: t("chatWelcome") }]);
-      return;
     }
-
-    const modelMessages = messages.filter((m) => m.role === "model");
-    if (modelMessages.length === 0) return;
-
-    setTranslating(true);
-    Promise.all(
-      modelMessages.map(async (msg) => {
-        try {
-          const res = await fetch("/api/ai/market-guide", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              message: `Translate this text to the target language, keeping the same meaning and tone. Return only the translated text, nothing else: "${msg.text}"`,
-              history: [], listing: null, lang,
-            }),
-          });
-          const data = await res.json();
-          return res.ok ? data.reply : msg.text;
-        } catch { return msg.text; }
-      })
-    ).then((translated) => {
-      setMessages((prev) => {
-        let idx = 0;
-        return prev.map((m) => m.role === "model" ? { ...m, text: translated[idx++] ?? m.text } : m);
-      });
-      setTranslating(false);
-    });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lang]);
 
@@ -340,7 +312,7 @@ export default function BuyerEstimateChat() {
             {message.text}
           </div>
         ))}
-        {(busy || translating) && <div className="buyer-chat-message from-guide">{t("chatThinking")}</div>}
+        {busy && <div className="buyer-chat-message from-guide">{t("chatThinking")}</div>}
         <div ref={bottom}/>
       </div>
       <div className="buyer-chat-disclaimer">{t("chatDisclaimer")}</div>
@@ -363,7 +335,7 @@ export default function BuyerEstimateChat() {
           {micListening ? <MicOff size={15}/> : <Mic size={15}/>}
           {micListening && <span className="voice-nav-pulse"/>}
         </button>
-        <button type="submit" aria-label={t("chatSend")} disabled={busy || translating || !draft.trim()}><Send size={17}/></button>
+        <button type="submit" aria-label={t("chatSend")} disabled={busy || !draft.trim()}><Send size={17}/></button>
       </form>
     </section>}
     <button type="button" className="buyer-chat-launch" aria-expanded={open} onClick={() => setOpen((v) => !v)}>

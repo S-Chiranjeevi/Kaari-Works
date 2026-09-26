@@ -7,12 +7,13 @@ export async function POST(request: NextRequest) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return NextResponse.json({ detail: "The Kaari buyer guide needs GEMINI_API_KEY configured on the server." }, { status: 503 });
   const body = await request.json().catch(() => null);
-  const message = typeof body?.message === "string" ? body.message.trim().slice(0, 1200) : "";
+  const message = typeof body?.message === "string" ? body.message.trim().slice(0, 600) : "";
   if (!message) return NextResponse.json({ detail: "Ask about a craft, its estimated making time or fair cost." }, { status: 422 });
   const history: Turn[] = Array.isArray(body?.history)
-    ? body.history.slice(-8).filter((turn: unknown): turn is Turn =>
+    ? (body.history as unknown[]).slice(-4).filter((turn: unknown): turn is Turn =>
       !!turn && typeof turn === "object" && ["user", "model"].includes((turn as Turn).role) &&
-      typeof (turn as Turn).text === "string" && (turn as Turn).text.length <= 1200)
+      typeof (turn as Turn).text === "string" && (turn as Turn).text.length <= 600)
+      .map(({ role, text }) => ({ role, text: text.slice(0, 600) }))
     : [];
 
   let listingContext = "No specific Kaari Works product listing was supplied.";
@@ -46,20 +47,7 @@ export async function POST(request: NextRequest) {
   const langNames: Record<string, string> = { en: "English", hi: "Hindi", ta: "Tamil", te: "Telugu", kn: "Kannada" };
   const replyLang = langNames[lang] ?? "English";
 
-  const systemPrompt = [
-    "You are Kaari Guide, a warm, knowledgeable AI helper for Kaari Works, an Indian artisan marketplace.",
-    "You help buyers and artisans understand the craftsmanship, fair making costs, and time required for handmade items.",
-    `LANGUAGE: Always reply in ${replyLang}. If the user writes in any language, still reply in ${replyLang}.`,
-    "TONE: Warm, conversational, respectful, easy to listen to when read aloud.",
-    "FORMAT RULES — STRICTLY FOLLOW:",
-    "- Reply in 2 to 3 plain spoken sentences ONLY.",
-    "- NEVER use bullet points, numbered lists, asterisks, or dashes.",
-    "- NEVER use markdown bold (**text**) or symbols because this text will be read aloud via voice synthesis.",
-    "- Clearly state what the product is, its estimated raw material and making cost range in ₹, and the estimated time (hours or days) needed to make it.",
-    "- Conclude with a warm note that the artisan values their unique skill, size, and tradition in the final price.",
-    "GOOD example: 'For this handmade Clay Pot, the estimated raw material and making cost is around ₹80 to ₹200, and it typically takes 4 to 8 hours of shaping and kiln baking to complete. The artisan sets their fair selling price based on their personal craft and effort.'",
-    "Product listing context: " + listingContext,
-  ].join("\n");
+  const systemPrompt = `You are Kaari Guide for handmade craft costs and making times. Reply warmly in ${replyLang}, in 2 to 3 short spoken sentences. Estimate making/material cost and craft time when details support it; make clear that estimates are indicative and listing data is seller-supplied and unverified. Never imply a price difference proves dishonesty. Listing: ${listingContext}`;
 
   try {
     const model = process.env.GEMINI_MODEL || "gemini-2.5-flash-lite";
@@ -70,34 +58,13 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify({
         system_instruction: { parts: [{ text: systemPrompt }] },
         contents: [...history.map(({ role, text }) => ({ role, parts: [{ text }] })), { role: "user", parts: [{ text: message }] }],
-        generationConfig: { temperature: 0.3, maxOutputTokens: 300 },
+        generationConfig: { temperature: 0.3, maxOutputTokens: 120 },
       }),
     });
     const result = await response.json();
     if (!response.ok) {
-      // If rate limited, retry once after the suggested wait time (capped at 30s)
       if (response.status === 429) {
-        const retryMatch = result?.error?.message?.match(/retry in ([\d.]+)s/i);
-        const waitMs = Math.min((parseFloat(retryMatch?.[1] ?? "5") + 1) * 1000, 30_000);
-        await new Promise((r) => setTimeout(r, waitMs));
-        const retry = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
-          signal: AbortSignal.timeout(30_000),
-          body: JSON.stringify({
-            system_instruction: { parts: [{ text: systemPrompt }] },
-            contents: [...history.map(({ role, text }) => ({ role, parts: [{ text }] })), { role: "user", parts: [{ text: message }] }],
-            generationConfig: { temperature: 0.3, maxOutputTokens: 300 },
-          }),
-        });
-        const retryResult = await retry.json();
-        if (!retry.ok) {
-          return NextResponse.json({ detail: `The buyer guide is busy. Please try again in a moment.` }, { status: 503 });
-        }
-        const retryReply = retryResult.candidates?.[0]?.content?.parts?.map((part: { text?: string }) => part.text || "").join("").trim()
-          .replace(/\*\*(.*?)\*\*/g, "$1").replace(/\*(.*?)\*/g, "$1").replace(/^[\*\-]\s+/gm, "").replace(/^\d+\.\s+/gm, "").replace(/\n{3,}/g, "\n\n").trim();
-        if (!retryReply) return NextResponse.json({ detail: "Gemini returned an empty reply. Please try again." }, { status: 502 });
-        return NextResponse.json({ reply: retryReply });
+        return NextResponse.json({ detail: "Gemini's request limit has been reached. Please wait before asking again, or check the API quota for this key." }, { status: 429 });
       }
       console.error("Gemini buyer guide failed", response.status, result?.error?.message);
       return NextResponse.json({ detail: `The buyer guide could not respond: ${result?.error?.message || "Check Gemini model access and try again."}` }, { status: 502 });
