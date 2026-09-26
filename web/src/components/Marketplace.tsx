@@ -82,6 +82,9 @@ function MarketplaceInner() {
   const [saving, setSaving] = useState(false);
   const [enhancing, setEnhancing] = useState(false);
   const [notice, setNotice] = useState("");
+  const [draftSaving, setDraftSaving] = useState(false);
+  const [hasDraft, setHasDraft] = useState(false);
+  const [draftLastSaved, setDraftLastSaved] = useState<string | null>(null);
   const [form, setForm] = useState(blankForm);
   const [contact, setContact] = useState<Product | null>(null);
   const [contactQuantity, setContactQuantity] = useState("10");
@@ -134,9 +137,91 @@ function MarketplaceInner() {
     catch { /* silent */ }
   }, [api, isSignedIn]);
 
+  const loadDraft = useCallback(async () => {
+    let localDraft: ListingForm | null = null;
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem("kaari_seller_draft");
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (parsed && typeof parsed === "object") {
+            localDraft = {
+              name: parsed.name || "",
+              category: parsed.category || "Textiles",
+              description: parsed.description || "",
+              price: parsed.price || "",
+              cost: parsed.cost || "",
+              hours: parsed.hours || "",
+              experience: parsed.experience || "",
+              quantity: parsed.quantity || "20",
+              minimum: parsed.minimum || "5",
+              leadTime: parsed.leadTime || "",
+              image: parsed.image || "",
+              images: Array.isArray(parsed.images) && parsed.images.length > 0 ? parsed.images : (parsed.image ? [parsed.image] : []),
+            };
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    if (isSignedIn) {
+      try {
+        const res = await api("/api/products/draft", {}, true);
+        if (res?.draft) {
+          const d = res.draft;
+          const loadedForm: ListingForm = {
+            name: d.name || "",
+            category: d.category || "Textiles",
+            description: d.description || "",
+            price: d.price || "",
+            cost: d.cost || "",
+            hours: d.hours || "",
+            experience: d.experience || "",
+            quantity: d.quantity || "20",
+            minimum: d.minimum || "5",
+            leadTime: d.leadTime || "",
+            image: d.image || "",
+            images: Array.isArray(d.images) && d.images.length > 0 ? d.images : (d.image ? [d.image] : []),
+          };
+          setForm(loadedForm);
+          setHasDraft(true);
+          if (d.updatedAt) {
+            setDraftLastSaved(new Date(d.updatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
+          }
+          if (typeof window !== "undefined") {
+            try { localStorage.setItem("kaari_seller_draft", JSON.stringify(loadedForm)); } catch {}
+          }
+          return;
+        }
+      } catch {
+        // fallback to localDraft
+      }
+    }
+
+    if (localDraft) {
+      setForm(localDraft);
+      setHasDraft(true);
+    }
+  }, [api, isSignedIn]);
+
   useEffect(() => { void loadProducts(); }, [loadProducts]);
   useEffect(() => { void loadInquiries(); }, [loadInquiries]);
   useEffect(() => { void loadOrders(); void loadCart(); }, [loadOrders, loadCart]);
+  useEffect(() => { void loadDraft(); }, [loadDraft]);
+  useEffect(() => { if (tab === "sell") void loadDraft(); }, [tab, loadDraft]);
+
+  // Auto-sync form changes to localStorage so accidental refresh or closing tab preserves entered details
+  useEffect(() => {
+    const hasContent = form.name.trim() || form.images.length > 0 || form.price || form.description.trim();
+    if (hasContent && typeof window !== "undefined") {
+      const timer = setTimeout(() => {
+        try { localStorage.setItem("kaari_seller_draft", JSON.stringify(form)); } catch {}
+      }, 800);
+      return () => clearTimeout(timer);
+    }
+  }, [form]);
 
   // Search on Enter or after 600ms debounce
   useEffect(() => {
@@ -307,6 +392,62 @@ function MarketplaceInner() {
     finally { setEnhancing(false); }
   }
 
+  async function saveDraft() {
+    setDraftSaving(true);
+    try {
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem("kaari_seller_draft", JSON.stringify(form));
+        } catch {}
+      }
+
+      if (isSignedIn) {
+        await api("/api/products/draft", {
+          method: "POST",
+          body: JSON.stringify({
+            name: form.name,
+            category: form.category,
+            description: form.description,
+            price: form.price,
+            cost: form.cost,
+            hours: form.hours,
+            experience: form.experience,
+            quantity: form.quantity,
+            minimum: form.minimum,
+            leadTime: form.leadTime,
+            image: form.image,
+            images: form.images,
+          }),
+        }, true);
+      }
+
+      setHasDraft(true);
+      const timeStr = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      setDraftLastSaved(timeStr);
+      flash("✓ Draft saved! Your images and product details are safely preserved.");
+    } catch (error) {
+      flash(error instanceof Error ? error.message : "Draft saved locally.");
+    } finally {
+      setDraftSaving(false);
+    }
+  }
+
+  async function discardDraft() {
+    if (!window.confirm("Are you sure you want to discard this draft and reset the form?")) return;
+    try {
+      if (isSignedIn) {
+        await api("/api/products/draft", { method: "DELETE" }, true).catch(() => {});
+      }
+    } catch {}
+    if (typeof window !== "undefined") {
+      try { localStorage.removeItem("kaari_seller_draft"); } catch {}
+    }
+    setForm(blankForm);
+    setHasDraft(false);
+    setDraftLastSaved(null);
+    flash("Draft discarded.");
+  }
+
   async function publishListing(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault(); setSaving(true);
     try {
@@ -320,6 +461,17 @@ function MarketplaceInner() {
         image_url: form.images.length > 0 ? JSON.stringify(form.images) : (form.image || null),
         images: form.images,
       }) }, true);
+
+      // Clean up draft in local storage and database
+      if (typeof window !== "undefined") {
+        try { localStorage.removeItem("kaari_seller_draft"); } catch {}
+      }
+      if (isSignedIn) {
+        await api("/api/products/draft", { method: "DELETE" }, true).catch(() => {});
+      }
+      setHasDraft(false);
+      setDraftLastSaved(null);
+
       setForm(blankForm); flash(t("noticePublished")); setTab("discover"); await loadProducts();
     } catch (error) { flash(error instanceof Error ? error.message : t("noticePublishFail")); }
     finally { setSaving(false); }
@@ -543,6 +695,47 @@ function MarketplaceInner() {
       <SignedIn>
         <form className="listing-workspace" onSubmit={publishListing}>
           <div className="listing-form-main"><section className="form-card">
+            {hasDraft && (
+              <div className="draft-banner" style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "12px 16px",
+                background: "linear-gradient(135deg, rgba(19, 134, 108, 0.08), rgba(19, 134, 108, 0.03))",
+                border: "1px solid rgba(19, 134, 108, 0.25)",
+                borderRadius: "10px",
+                marginBottom: "20px",
+                fontSize: "0.88rem",
+                color: "#13866c",
+                flexWrap: "wrap",
+                gap: "8px",
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span style={{ fontSize: "1.1rem" }}>💾</span>
+                  <span>
+                    <strong>Saved draft active</strong>
+                    {draftLastSaved ? ` · Last saved at ${draftLastSaved}` : ""}
+                    {" — your uploaded images and details are preserved."}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={discardDraft}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: "#dc3545",
+                    cursor: "pointer",
+                    fontSize: "0.85rem",
+                    fontWeight: 600,
+                    textDecoration: "underline",
+                    padding: "4px 8px",
+                  }}
+                >
+                  Discard draft
+                </button>
+              </div>
+            )}
             <ProductPhotoUpload
               images={form.images}
               image={form.image}
@@ -565,7 +758,46 @@ function MarketplaceInner() {
               <label className="field"><span>{t("fieldCost")}</span><input type="number" min="0" value={form.cost} onChange={(e) => setField("cost", e.target.value)} placeholder={t("fieldCostPlaceholder")}/></label>
               <label className="field"><span>Your selling price (₹)</span><input required type="number" min="1" value={form.price} onChange={(e) => setField("price", e.target.value)} placeholder="e.g. 1200"/></label>
             </div>
-            <button className="button" type="submit" disabled={saving}>{saving ? t("publishingBtn") : t("publishBtn")}</button>
+            <div style={{ display: "flex", alignItems: "center", gap: "14px", marginTop: "24px", flexWrap: "wrap" }}>
+              <button className="button" type="submit" disabled={saving || draftSaving} style={{ minWidth: "160px" }}>
+                {saving ? t("publishingBtn") : "🚀 " + t("publishBtn")}
+              </button>
+              <button
+                type="button"
+                className="button outline"
+                onClick={saveDraft}
+                disabled={saving || draftSaving}
+                style={{
+                  borderColor: "#13866c",
+                  color: "#13866c",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  minWidth: "150px",
+                }}
+              >
+                {draftSaving ? "Saving..." : "💾 Save as draft"}
+              </button>
+              {hasDraft && (
+                <button
+                  type="button"
+                  onClick={discardDraft}
+                  disabled={saving || draftSaving}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: "#888",
+                    cursor: "pointer",
+                    fontSize: "0.86rem",
+                    marginLeft: "auto",
+                    padding: "6px 10px",
+                    textDecoration: "underline",
+                  }}
+                >
+                  Discard draft
+                </button>
+              )}
+            </div>
           </section></div>
           <FairPriceGuide range={suggestedRange} cost={form.cost} hours={form.hours} experience={form.experience} price={form.price} setPrice={(v) => setField("price", v)}/>
         </form>

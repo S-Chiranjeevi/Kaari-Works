@@ -93,6 +93,13 @@ export async function POST(request: NextRequest) {
       include: { seller: { select: { displayName: true } } },
     });
 
+    // When publishing a real product, delete any pending draft for this seller
+    if (body.status !== "draft") {
+      await prisma.product.deleteMany({
+        where: { sellerId: userId, status: "draft" },
+      }).catch(() => {});
+    }
+
     const { images, imageUrl } = resolveProductImages(product.id, product.imageUrl);
     return NextResponse.json({
       ...serializeProduct(product),
