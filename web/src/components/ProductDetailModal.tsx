@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { X, ShoppingCart, Zap, Package, Clock, Layers, Star } from "lucide-react";
+import { Sparkles, X, ShoppingCart, Zap, Package, Clock, Layers, Star } from "lucide-react";
 import { useLang } from "@/lib/i18n";
 
 export type ProductDetail = {
@@ -129,6 +129,26 @@ export default function ProductDetailModal({ product, onClose, onAddToCart, onBu
             {outOfStock
               ? <button className="button" disabled style={{opacity:.5}}>Out of Stock</button>
               : <>
+                  <button
+                    type="button"
+                    className="pd-ask-kaari-btn"
+                    onClick={() => {
+                      window.dispatchEvent(new CustomEvent("kaari:estimate-product", {
+                        detail: {
+                          name: product.name,
+                          category: product.category,
+                          description: product.description,
+                          price_inr: product.price_inr,
+                          lead_time: product.lead_time,
+                          materials: product.materials,
+                        }
+                      }));
+                      onClose();
+                    }}
+                    title="Ask Kaari AI to estimate cost & time"
+                  >
+                    <Sparkles size={15}/> Ask Kaari
+                  </button>
                   <button className="button outline pd-cart-btn" onClick={handleAddToCart} disabled={adding || buying}>
                     <ShoppingCart size={16}/>{adding ? "Adding…" : "Add to Cart"}
                   </button>

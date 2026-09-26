@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { SignedIn, SignedOut, SignInButton, UserButton, useAuth } from "@clerk/nextjs";
-import { MessageCircle, Search, ShoppingBag, Store, Package, User, X, ClipboardList, ShoppingCart, CheckCircle, Clock, Truck, XCircle } from "lucide-react";
+import { Sparkles, MessageCircle, Search, ShoppingBag, Store, Package, User, X, ClipboardList, ShoppingCart, CheckCircle, Clock, Truck, XCircle } from "lucide-react";
 import BuyerEstimateChat from "@/components/BuyerEstimateChat";
 import { FairPriceGuide, ProductPhotoUpload } from "@/components/SellerListingControls";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
@@ -412,11 +412,38 @@ function MarketplaceInner() {
                       {product.quantity_available > 0
                         ? <span className="product-chip product-chip--green">✓ {product.quantity_available} in stock</span>
                         : <span className="product-chip product-chip--red">Out of stock</span>}
-                      {product.lead_time && <span className="product-chip">🕐 {product.lead_time}</span>}
+                      {product.lead_time && (
+                        <span className="product-chip">
+                          🕐 {String(product.lead_time).match(/day|week|month|hr|hour/i) ? product.lead_time : `${product.lead_time} days`}
+                        </span>
+                      )}
                     </div>
                     <div className="product-foot">
                       <div className="product-price">₹{product.price_inr.toLocaleString("en-IN")}<small> / piece</small></div>
-                      <button className="button" style={{fontSize:11,padding:"6px 12px"}} onClick={(e) => { e.stopPropagation(); openProduct(product.id); }}>View & Buy</button>
+                      <div className="product-card-actions">
+                        <button
+                          type="button"
+                          className="ask-kaari-btn"
+                          title="Ask Kaari AI to estimate cost & time"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            window.dispatchEvent(new CustomEvent("kaari:estimate-product", {
+                              detail: {
+                                name: product.name,
+                                category: product.category,
+                                description: product.description,
+                                price_inr: product.price_inr,
+                                lead_time: product.lead_time,
+                                quantity_available: product.quantity_available,
+                                minimum_order_quantity: product.minimum_order_quantity,
+                              }
+                            }));
+                          }}
+                        >
+                          <Sparkles size={12} /> Ask Kaari
+                        </button>
+                        <button className="button" style={{fontSize:11,padding:"6px 12px"}} onClick={(e) => { e.stopPropagation(); openProduct(product.id); }}>View & Buy</button>
+                      </div>
                     </div>
                   </div>
                 </article>

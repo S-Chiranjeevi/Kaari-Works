@@ -160,19 +160,218 @@
 .cl-userButtonPopoverCard .cl-internal-b3fm6y{background:#fff!important}
 
 /* ── Split product card (half image / half details) ──────────────────────── */
-.product-card--split{display:flex;flex-direction:row;height:180px;overflow:hidden}
-.product-art--half{width:45%;min-width:45%;height:100%;flex-shrink:0;border-radius:0;position:relative}
-.product-art--half img{width:100%;height:100%;object-fit:cover}
-.product-art--half span[aria-hidden]{font-size:52px;display:grid;place-items:center;height:100%}
-.product-body--half{flex:1;padding:12px 14px;display:flex;flex-direction:column;gap:4px;overflow:hidden;min-width:0}
-.product-body--half h3{font-size:14px;font-weight:700;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.product-body--half .seller-name{font-size:11px}
-.product-body--half .product-description{font-size:11px;line-height:1.45;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;flex-shrink:0;margin:0}
-.product-body--half .product-chips{gap:4px;margin:4px 0}
-.product-body--half .product-chip{font-size:9px;padding:2px 6px}
-.product-body--half .product-foot{margin-top:auto;padding-top:4px}
-.product-body--half .product-price{font-size:15px}
-.product-body--half .product-price small{font-size:10px}
-/* Make product grid single column for split cards */
-.product-grid:has(.product-card--split){grid-template-columns:1fr}
-@media(min-width:700px){.product-grid:has(.product-card--split){grid-template-columns:repeat(2,1fr)}}
+.product-card--split {
+  display: flex;
+  flex-direction: row;
+  min-height: 220px;
+  height: auto;
+  overflow: hidden;
+  border-radius: 16px;
+  border: 1px solid #dfe7e2;
+  box-shadow: 0 3px 12px rgba(23, 50, 47, 0.05);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  background: #ffffff;
+}
+.product-card--split:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(23, 50, 47, 0.09);
+}
+.product-art--half {
+  width: 44%;
+  min-width: 44%;
+  min-height: 220px;
+  flex-shrink: 0;
+  border-radius: 0;
+  position: relative;
+  overflow: hidden;
+  background: #f1f4f2;
+}
+.product-art--half img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.product-art--half span[aria-hidden] {
+  font-size: 54px;
+  display: grid;
+  place-items: center;
+  height: 100%;
+  width: 100%;
+}
+.product-art--half .category-label {
+  position: absolute;
+  left: 10px;
+  top: 10px;
+  z-index: 2;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(6px);
+  color: #0d6654;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 4px 9px;
+  border-radius: 99px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  letter-spacing: 0.2px;
+}
+.product-body--half {
+  flex: 1;
+  padding: 13px 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow: hidden;
+  min-width: 0;
+  background: #fff;
+}
+.product-body--half h3 {
+  font-size: 15.5px;
+  font-weight: 750;
+  color: #122c27;
+  margin: 0;
+  line-height: 1.35;
+  padding-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-transform: capitalize;
+  letter-spacing: -0.2px;
+}
+.product-body--half .seller-name {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #435c54;
+  line-height: 1.3;
+}
+.product-body--half .product-description {
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.45;
+  color: #263c35;
+  background: #f4f8f5;
+  border-left: 2.5px solid #13866c;
+  padding: 4px 8px;
+  border-radius: 4px;
+  margin: 2px 0 4px;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  flex-shrink: 0;
+  word-break: break-word;
+}
+.product-body--half .product-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin: 3px 0 5px;
+}
+.product-body--half .product-chip {
+  font-size: 10px;
+  font-weight: 650;
+  padding: 2.5px 7px;
+  border-radius: 6px;
+  background: #f0f4f1;
+  color: #193630;
+  border: 1px solid #e1ebe4;
+}
+.product-body--half .product-chip--green {
+  background: #e2f6ec;
+  color: #0b604f;
+  border-color: #c7eed9;
+}
+.product-body--half .product-chip--red {
+  background: #fde8e8;
+  color: #b91c1c;
+  border-color: #fbd0d0;
+}
+.product-body--half .product-foot {
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px solid #edf2ee;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.product-body--half .product-price {
+  font-size: 15.5px;
+  font-weight: 800;
+  color: #122c27;
+  line-height: 1.1;
+}
+.product-body--half .product-price small {
+  font-size: 10.5px;
+  color: #647b74;
+  font-weight: 600;
+  display: inline;
+}
+.product-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.ask-kaari-btn {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: #e6f5ef;
+  color: #0d6654;
+  border: 1px solid #b7dfd0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.ask-kaari-btn:hover {
+  background: #d0eee3;
+  color: #064b3d;
+  transform: translateY(-1px);
+}
+.pd-ask-kaari-btn {
+  font-size: 13px;
+  font-weight: 700;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: #e6f5ef;
+  color: #0d6654;
+  border: 1px solid #b7dfd0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+.pd-ask-kaari-btn:hover {
+  background: #d0eee3;
+  color: #064b3d;
+}
+
+/* Make product grid single column for split cards on mobile, 2 cols on wider screens */
+.product-grid:has(.product-card--split) {
+  grid-template-columns: 1fr;
+}
+@media(min-width: 768px) {
+  .product-grid:has(.product-card--split) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+  }
+}
+@media(max-width: 540px) {
+  .product-card--split {
+    flex-direction: column;
+    height: auto;
+    min-height: unset;
+  }
+  .product-art--half {
+    width: 100%;
+    min-width: 100%;
+    height: 180px;
+    min-height: 180px;
+  }
+}
