@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { SignedIn, SignedOut, SignInButton, UserButton, useAuth } from "@clerk/nextjs";
-import { Sparkles, MessageCircle, Search, ShoppingBag, Store, Package, User, X, ClipboardList, ShoppingCart, CheckCircle, Clock, Truck, XCircle } from "lucide-react";
+import { Sparkles, MessageCircle, Search, ShoppingBag, Store, Package, User, X, ClipboardList, ShoppingCart, CheckCircle, Clock, Truck, XCircle, Edit, Trash2, Eye, Plus, AlertCircle, BarChart3 } from "lucide-react";
+import EditProductModal, { type EditableProduct } from "@/components/EditProductModal";
 import BuyerEstimateChat from "@/components/BuyerEstimateChat";
 import { FairPriceGuide, ProductPhotoUpload } from "@/components/SellerListingControls";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
@@ -16,6 +17,9 @@ import { VoiceAction } from "@/lib/voiceCommands";
 type Product = {
   id: number; name: string; category: string; description: string; materials: string | null;
   seller_name: string | null; seller_id: string; price_inr: number;
+  making_cost_inr?: number | null;
+  hours_to_make?: number | null;
+  craft_experience_years?: number | null;
   minimum_order_quantity: number; quantity_available: number; lead_time: string | null;
   image_url: string | null; images?: string[];
 };
@@ -27,6 +31,24 @@ type Order = {
   id: number; status: string; total_amount_inr: number; shipping_address: string | null;
   notes: string | null; created_at: string;
   items: Array<{ id: number; product_id: number; product_name: string; seller_name: string | null; quantity: number; price_inr: number; subtotal_inr: number }>;
+};
+type SellerProduct = Product & {
+  status: string;
+  inquiries_count: number;
+  orders_count: number;
+  units_sold: number;
+  revenue_inr: number;
+  stock_status: "in_stock" | "low_stock" | "out_of_stock";
+};
+type SellerSummary = {
+  total_products: number;
+  in_stock: number;
+  low_stock: number;
+  out_of_stock: number;
+  total_inquiries: number;
+  total_orders: number;
+  total_units_sold: number;
+  total_revenue_inr: number;
 };
 type ListingForm = {
   name: string; category: string; description: string; price: string; cost: string;
@@ -85,6 +107,24 @@ function MarketplaceInner() {
   const [draftSaving, setDraftSaving] = useState(false);
   const [hasDraft, setHasDraft] = useState(false);
   const [draftLastSaved, setDraftLastSaved] = useState<string | null>(null);
+
+  // Seller product tracking & management state
+  const [sellerProducts, setSellerProducts] = useState<SellerProduct[]>([]);
+  const [sellerSummary, setSellerSummary] = useState<SellerSummary>({
+    total_products: 0,
+    in_stock: 0,
+    low_stock: 0,
+    out_of_stock: 0,
+    total_inquiries: 0,
+    total_orders: 0,
+    total_units_sold: 0,
+    total_revenue_inr: 0,
+  });
+  const [sellerView, setSellerView] = useState<"inventory" | "add">("inventory");
+  const [sellerFilter, setSellerFilter] = useState<"all" | "in_stock" | "low_stock" | "out_of_stock">("all");
+  const [sellerSearch, setSellerSearch] = useState("");
+  const [loadingSellerProducts, setLoadingSellerProducts] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<EditableProduct | null>(null);
   const [form, setForm] = useState(blankForm);
   const [contact, setContact] = useState<Product | null>(null);
   const [contactQuantity, setContactQuantity] = useState("10");
@@ -130,6 +170,37 @@ function MarketplaceInner() {
     try { setOrders(await api("/api/orders", {}, true)); }
     catch { /* silent */ }
   }, [api, isSignedIn]);
+
+  const loadSellerProducts = useCallback(async () => {
+    if (!isSignedIn) return;
+    setLoadingSellerProducts(true);
+    try {
+      const res = await api("/api/products/seller", {}, true);
+      if (res) {
+        setSellerProducts(res.products || []);
+        if (res.summary) setSellerSummary(res.summary);
+      }
+    } catch {
+      // silent
+    } finally {
+      setLoadingSellerProducts(false);
+    }
+  }, [api, isSignedIn]);
+
+  async function handleDeleteProduct(productId: number, productName: string) {
+    if (!window.confirm(`Are you sure you want to permanently delete "${productName}"? This will remove it from the marketplace.`)) {
+      return;
+    }
+    try {
+      await api(`/api/products/${productId}`, { method: "DELETE" }, true);
+      flash(`✓ "${productName}" has been deleted.`);
+      await loadSellerProducts();
+      await loadProducts();
+      if (selectedProduct?.id === productId) setSelectedProduct(null);
+    } catch (err) {
+      flash(err instanceof Error ? err.message : "Could not delete product.");
+    }
+  }
 
   const loadCart = useCallback(async () => {
     if (!isSignedIn) return;
@@ -210,7 +281,25 @@ function MarketplaceInner() {
   useEffect(() => { void loadInquiries(); }, [loadInquiries]);
   useEffect(() => { void loadOrders(); void loadCart(); }, [loadOrders, loadCart]);
   useEffect(() => { void loadDraft(); }, [loadDraft]);
-  useEffect(() => { if (tab === "sell") void loadDraft(); }, [tab, loadDraft]);
+  useEffect(() => {
+    if (tab === "sell") {
+      void loadDraft();
+      if (isSignedIn) void loadSellerProducts();
+    }
+  }, [tab, isSignedIn, loadDraft, loadSellerProducts]);
+
+  const filteredSellerProducts = useMemo(() => {
+    return sellerProducts.filter((p) => {
+      if (sellerFilter !== "all" && p.stock_status !== sellerFilter) return false;
+      if (sellerSearch.trim()) {
+        const q = sellerSearch.toLowerCase();
+        const matchesName = p.name.toLowerCase().includes(q);
+        const matchesCat = p.category.toLowerCase().includes(q);
+        if (!matchesName && !matchesCat) return false;
+      }
+      return true;
+    });
+  }, [sellerProducts, sellerFilter, sellerSearch]);
 
   // Auto-sync form changes to localStorage so accidental refresh or closing tab preserves entered details
   useEffect(() => {
@@ -472,7 +561,7 @@ function MarketplaceInner() {
       setHasDraft(false);
       setDraftLastSaved(null);
 
-      setForm(blankForm); flash(t("noticePublished")); setTab("discover"); await loadProducts();
+      setForm(blankForm); flash(t("noticePublished")); setSellerView("inventory"); await loadSellerProducts(); setTab("discover"); await loadProducts();
     } catch (error) { flash(error instanceof Error ? error.message : t("noticePublishFail")); }
     finally { setSaving(false); }
   }
@@ -693,114 +782,416 @@ function MarketplaceInner() {
         </div>
       </SignedOut>
       <SignedIn>
-        <form className="listing-workspace" onSubmit={publishListing}>
-          <div className="listing-form-main"><section className="form-card">
-            {hasDraft && (
-              <div className="draft-banner" style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                padding: "12px 16px",
-                background: "linear-gradient(135deg, rgba(19, 134, 108, 0.08), rgba(19, 134, 108, 0.03))",
-                border: "1px solid rgba(19, 134, 108, 0.25)",
-                borderRadius: "10px",
-                marginBottom: "20px",
-                fontSize: "0.88rem",
-                color: "#13866c",
-                flexWrap: "wrap",
-                gap: "8px",
-              }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <span style={{ fontSize: "1.1rem" }}>💾</span>
-                  <span>
-                    <strong>Saved draft active</strong>
-                    {draftLastSaved ? ` · Last saved at ${draftLastSaved}` : ""}
-                    {" — your uploaded images and details are preserved."}
-                  </span>
+        {/* Subnavigation: Toggle between Inventory Tracker & Create Listing */}
+        <div className="seller-nav-tabs">
+          <button
+            type="button"
+            className={`seller-nav-tab ${sellerView === "inventory" ? "seller-nav-tab--active" : ""}`}
+            onClick={() => setSellerView("inventory")}
+          >
+            <Package size={17} />
+            <span>My Products & Inventory ({sellerProducts.length})</span>
+          </button>
+          <button
+            type="button"
+            className={`seller-nav-tab ${sellerView === "add" ? "seller-nav-tab--active" : ""}`}
+            onClick={() => setSellerView("add")}
+          >
+            <Plus size={17} />
+            <span>Add New Listing</span>
+          </button>
+        </div>
+
+        {/* ── View 1: Inventory Tracker & Monitor ── */}
+        {sellerView === "inventory" && (
+          <section className="seller-inventory-section">
+            {/* KPI Metrics Tracking Bar */}
+            <div className="seller-metrics-grid">
+              <div className="seller-metric-card">
+                <div className="seller-metric-header">
+                  <span>Total Listings</span>
+                  <Package size={17} color="#13866c" />
                 </div>
+                <div className="seller-metric-value">{sellerSummary.total_products}</div>
+                <div className="seller-metric-sub">Handmade craft items</div>
+              </div>
+
+              <div className="seller-metric-card">
+                <div className="seller-metric-header">
+                  <span>In Stock</span>
+                  <CheckCircle size={17} color="#059669" />
+                </div>
+                <div className="seller-metric-value" style={{ color: "#059669" }}>
+                  {sellerSummary.in_stock}
+                </div>
+                <div className="seller-metric-sub">&gt; 5 available pieces</div>
+              </div>
+
+              <div className="seller-metric-card">
+                <div className="seller-metric-header">
+                  <span>Stock Alerts</span>
+                  <AlertCircle size={17} color={sellerSummary.low_stock + sellerSummary.out_of_stock > 0 ? "#d97706" : "#6d847c"} />
+                </div>
+                <div className="seller-metric-value" style={{ color: sellerSummary.low_stock + sellerSummary.out_of_stock > 0 ? "#d97706" : "#122c26" }}>
+                  {sellerSummary.low_stock + sellerSummary.out_of_stock}
+                </div>
+                <div className="seller-metric-sub">
+                  {sellerSummary.low_stock} low, {sellerSummary.out_of_stock} out of stock
+                </div>
+              </div>
+
+              <div className="seller-metric-card">
+                <div className="seller-metric-header">
+                  <span>Inquiries Received</span>
+                  <MessageCircle size={17} color="#2563eb" />
+                </div>
+                <div className="seller-metric-value" style={{ color: "#2563eb" }}>
+                  {sellerSummary.total_inquiries}
+                </div>
+                <div className="seller-metric-sub">Buyer custom inquiries</div>
+              </div>
+
+              <div className="seller-metric-card">
+                <div className="seller-metric-header">
+                  <span>Sales Revenue</span>
+                  <BarChart3 size={17} color="#0d6654" />
+                </div>
+                <div className="seller-metric-value" style={{ color: "#0d6654", fontSize: "22px" }}>
+                  ₹{sellerSummary.total_revenue_inr.toLocaleString("en-IN")}
+                </div>
+                <div className="seller-metric-sub">
+                  {sellerSummary.total_units_sold} craft units sold
+                </div>
+              </div>
+            </div>
+
+            {/* Filter & Search Bar */}
+            <div className="seller-filter-bar">
+              <div className="seller-search-box">
+                <Search size={16} className="seller-search-icon" />
+                <input
+                  type="text"
+                  placeholder="Search your products by title or category..."
+                  value={sellerSearch}
+                  onChange={(e) => setSellerSearch(e.target.value)}
+                  className="seller-search-input"
+                />
+              </div>
+
+              <div className="seller-status-filters">
                 <button
                   type="button"
-                  onClick={discardDraft}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    color: "#dc3545",
-                    cursor: "pointer",
-                    fontSize: "0.85rem",
-                    fontWeight: 600,
-                    textDecoration: "underline",
-                    padding: "4px 8px",
-                  }}
+                  className={`seller-filter-chip ${sellerFilter === "all" ? "seller-filter-chip--active" : ""}`}
+                  onClick={() => setSellerFilter("all")}
                 >
-                  Discard draft
+                  All ({sellerProducts.length})
+                </button>
+                <button
+                  type="button"
+                  className={`seller-filter-chip ${sellerFilter === "in_stock" ? "seller-filter-chip--active" : ""}`}
+                  onClick={() => setSellerFilter("in_stock")}
+                >
+                  In Stock ({sellerSummary.in_stock})
+                </button>
+                <button
+                  type="button"
+                  className={`seller-filter-chip ${sellerFilter === "low_stock" ? "seller-filter-chip--active" : ""}`}
+                  onClick={() => setSellerFilter("low_stock")}
+                >
+                  Low Stock ({sellerSummary.low_stock})
+                </button>
+                <button
+                  type="button"
+                  className={`seller-filter-chip ${sellerFilter === "out_of_stock" ? "seller-filter-chip--active" : ""}`}
+                  onClick={() => setSellerFilter("out_of_stock")}
+                >
+                  Out of Stock ({sellerSummary.out_of_stock})
                 </button>
               </div>
-            )}
-            <ProductPhotoUpload
-              images={form.images}
-              image={form.image}
-              enhancing={enhancing}
-              onAddImages={handleAddImages}
-              onRemoveImage={handleRemoveImage}
-              onSelect={(file) => file && handleAddImages([file])}
-              onEnhance={() => void enhanceImage(0)}
-              onRemove={() => setForm((prev) => ({ ...prev, images: [], image: "" }))}
-            />
-            <div className="form-grid listing-details-grid">
-              <label className="field"><span>{t("fieldName")}</span><input required minLength={2} maxLength={180} value={form.name} onChange={(e) => setField("name", e.target.value)} placeholder={t("fieldNamePlaceholder")}/></label>
-              <label className="field"><span>{t("fieldCategory")}</span><select value={form.category} onChange={(e) => setField("category", e.target.value)}>{["Textiles","Pottery & ceramics","Woodwork","Jewellery","Home decor","Baskets","Paintings"].map((item) => <option key={item}>{item}</option>)}</select></label>
-              <label className="field full"><span>{t("fieldDescription")}</span><textarea required maxLength={5000} value={form.description} onChange={(e) => setField("description", e.target.value)} placeholder={t("fieldDescriptionPlaceholder")}/></label>
-              <label className="field"><span>{t("fieldHours")}</span><input type="number" min="0" step="0.5" value={form.hours} onChange={(e) => setField("hours", e.target.value)} placeholder={t("fieldHoursPlaceholder")}/></label>
-              <label className="field"><span>{t("fieldExperience")}</span><input type="number" min="0" value={form.experience} onChange={(e) => setField("experience", e.target.value)} placeholder={t("fieldExperiencePlaceholder")}/></label>
-              <label className="field"><span>{t("fieldPieces")}</span><input type="number" min="0" value={form.quantity} onChange={(e) => setField("quantity", e.target.value)}/></label>
-              <label className="field"><span>{t("fieldMinimum")}</span><input required type="number" min="1" value={form.minimum} onChange={(e) => setField("minimum", e.target.value)}/></label>
-              <label className="field"><span>{t("fieldLeadTime")}</span><input value={form.leadTime} onChange={(e) => setField("leadTime", e.target.value)} placeholder={t("fieldLeadTimePlaceholder")}/></label>
-              <label className="field"><span>{t("fieldCost")}</span><input type="number" min="0" value={form.cost} onChange={(e) => setField("cost", e.target.value)} placeholder={t("fieldCostPlaceholder")}/></label>
-              <label className="field"><span>Your selling price (₹)</span><input required type="number" min="1" value={form.price} onChange={(e) => setField("price", e.target.value)} placeholder="e.g. 1200"/></label>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: "14px", marginTop: "24px", flexWrap: "wrap" }}>
-              <button className="button" type="submit" disabled={saving || draftSaving} style={{ minWidth: "160px" }}>
-                {saving ? t("publishingBtn") : "🚀 " + t("publishBtn")}
-              </button>
-              <button
-                type="button"
-                className="button outline"
-                onClick={saveDraft}
-                disabled={saving || draftSaving}
+
+            {/* Inventory List / Grid */}
+            {loadingSellerProducts ? (
+              <div style={{ textAlign: "center", padding: "60px 20px", color: "#60726d" }}>
+                <p style={{ fontWeight: 600 }}>Loading your product inventory...</p>
+              </div>
+            ) : filteredSellerProducts.length === 0 ? (
+              <div
                 style={{
-                  borderColor: "#13866c",
-                  color: "#13866c",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  minWidth: "150px",
+                  textAlign: "center",
+                  padding: "60px 24px",
+                  background: "#ffffff",
+                  borderRadius: "16px",
+                  border: "1.5px dashed #cbdad4",
                 }}
               >
-                {draftSaving ? "Saving..." : "💾 Save as draft"}
-              </button>
+                <Package size={44} color="#94aca3" style={{ margin: "0 auto 12px" }} />
+                <h3 style={{ margin: "0 0 6px", color: "#192824", fontSize: "1.15rem" }}>
+                  {sellerProducts.length === 0 ? "No products listed yet" : "No matching products found"}
+                </h3>
+                <p style={{ margin: "0 0 20px", color: "#60726d", fontSize: "0.9rem" }}>
+                  {sellerProducts.length === 0
+                    ? "Start showcasing your artisanal craft to thousands of buyers."
+                    : "Try clearing your search query or status filter."}
+                </p>
+                {sellerProducts.length === 0 ? (
+                  <button
+                    type="button"
+                    className="button"
+                    onClick={() => setSellerView("add")}
+                    style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
+                  >
+                    <Plus size={16} /> Create Your First Listing
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="button outline"
+                    onClick={() => { setSellerSearch(""); setSellerFilter("all"); }}
+                  >
+                    Clear Filter
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="seller-inventory-grid">
+                {filteredSellerProducts.map((p) => {
+                  const displayImg = p.images?.[0] || p.image_url || "";
+                  const photosCount = p.images?.length || (p.image_url ? 1 : 0);
+                  const statusPillClass =
+                    p.status === "draft"
+                      ? "stock-pill--draft"
+                      : p.stock_status === "out_of_stock"
+                      ? "stock-pill--out"
+                      : p.stock_status === "low_stock"
+                      ? "stock-pill--low"
+                      : "stock-pill--instock";
+
+                  const statusPillText =
+                    p.status === "draft"
+                      ? "🟡 Draft"
+                      : p.stock_status === "out_of_stock"
+                      ? "🔴 Out of Stock"
+                      : p.stock_status === "low_stock"
+                      ? `🟠 Low Stock (${p.quantity_available})`
+                      : `🟢 In Stock (${p.quantity_available})`;
+
+                  return (
+                    <div key={p.id} className="seller-inv-card">
+                      <div className="seller-inv-cover-wrap">
+                        {displayImg ? (
+                          <img
+                            src={displayImg}
+                            alt={p.name}
+                            className="seller-inv-cover-img"
+                            onError={(e) => {
+                              (e.currentTarget as HTMLImageElement).src =
+                                "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' fill='%23eee'><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='%23aaa' font-size='12'>No image</text></svg>";
+                            }}
+                          />
+                        ) : (
+                          <div style={{ width: "100%", height: "100%", display: "grid", placeItems: "center", color: "#8aa098" }}>
+                            <span>No photo uploaded</span>
+                          </div>
+                        )}
+                        <span className={`seller-inv-status-badge ${statusPillClass}`}>
+                          {statusPillText}
+                        </span>
+                        {photosCount > 1 && (
+                          <span className="seller-inv-photos-badge">
+                            📷 {photosCount} photos
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="seller-inv-body">
+                        <span className="seller-inv-cat">{p.category}</span>
+                        <h3 className="seller-inv-title" title={p.name}>{p.name}</h3>
+
+                        <div className="seller-inv-price-row">
+                          <span className="seller-inv-price">₹{p.price_inr.toLocaleString("en-IN")}</span>
+                          {p.making_cost_inr != null && (
+                            <span className="seller-inv-cost">
+                              Cost: ₹{p.making_cost_inr.toLocaleString("en-IN")}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Live Inventory & Performance Tracking */}
+                        <div className="seller-inv-stats-box">
+                          <div className="seller-inv-stat-item">
+                            <span className="seller-inv-stat-label">Available Stock</span>
+                            <span className="seller-inv-stat-val">
+                              {p.quantity_available} pcs (min {p.minimum_order_quantity})
+                            </span>
+                          </div>
+                          <div className="seller-inv-stat-item">
+                            <span className="seller-inv-stat-label">Inquiries</span>
+                            <span className="seller-inv-stat-val">
+                              💬 {p.inquiries_count || 0} received
+                            </span>
+                          </div>
+                          <div className="seller-inv-stat-item">
+                            <span className="seller-inv-stat-label">Orders Placed</span>
+                            <span className="seller-inv-stat-val">
+                              🛒 {p.orders_count || 0} ({p.units_sold || 0} units)
+                            </span>
+                          </div>
+                          <div className="seller-inv-stat-item">
+                            <span className="seller-inv-stat-label">Sales Revenue</span>
+                            <span className="seller-inv-stat-val" style={{ color: "#0d6654" }}>
+                              ₹{(p.revenue_inr || 0).toLocaleString("en-IN")}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Action buttons: Edit, Delete, View */}
+                        <div className="seller-inv-actions">
+                          <button
+                            type="button"
+                            className="seller-inv-btn-edit"
+                            onClick={() => setEditingProduct(p as unknown as EditableProduct)}
+                          >
+                            <Edit size={14} />
+                            <span>Edit Details</span>
+                          </button>
+                          <button
+                            type="button"
+                            className="seller-inv-btn-delete"
+                            title="Delete this product"
+                            onClick={() => void handleDeleteProduct(p.id, p.name)}
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                          <button
+                            type="button"
+                            className="seller-inv-btn-view"
+                            title="View buyer listing preview"
+                            onClick={() => void openProduct(p.id)}
+                          >
+                            <Eye size={15} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* ── View 2: Add New Listing Form ── */}
+        {sellerView === "add" && (
+          <form className="listing-workspace" onSubmit={publishListing}>
+            <div className="listing-form-main"><section className="form-card">
               {hasDraft && (
+                <div className="draft-banner" style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  padding: "12px 16px",
+                  background: "linear-gradient(135deg, rgba(19, 134, 108, 0.08), rgba(19, 134, 108, 0.03))",
+                  border: "1px solid rgba(19, 134, 108, 0.25)",
+                  borderRadius: "10px",
+                  marginBottom: "20px",
+                  fontSize: "0.88rem",
+                  color: "#13866c",
+                  flexWrap: "wrap",
+                  gap: "8px",
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <span style={{ fontSize: "1.1rem" }}>💾</span>
+                    <span>
+                      <strong>Saved draft active</strong>
+                      {draftLastSaved ? ` · Last saved at ${draftLastSaved}` : ""}
+                      {" — your uploaded images and details are preserved."}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={discardDraft}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      color: "#dc3545",
+                      cursor: "pointer",
+                      fontSize: "0.85rem",
+                      fontWeight: 600,
+                      textDecoration: "underline",
+                      padding: "4px 8px",
+                    }}
+                  >
+                    Discard draft
+                  </button>
+                </div>
+              )}
+              <ProductPhotoUpload
+                images={form.images}
+                image={form.image}
+                enhancing={enhancing}
+                onAddImages={handleAddImages}
+                onRemoveImage={handleRemoveImage}
+                onSelect={(file) => file && handleAddImages([file])}
+                onEnhance={() => void enhanceImage(0)}
+                onRemove={() => setForm((prev) => ({ ...prev, images: [], image: "" }))}
+              />
+              <div className="form-grid listing-details-grid">
+                <label className="field"><span>{t("fieldName")}</span><input required minLength={2} maxLength={180} value={form.name} onChange={(e) => setField("name", e.target.value)} placeholder={t("fieldNamePlaceholder")}/></label>
+                <label className="field"><span>{t("fieldCategory")}</span><select value={form.category} onChange={(e) => setField("category", e.target.value)}>{["Textiles","Pottery & ceramics","Woodwork","Jewellery","Home decor","Baskets","Paintings"].map((item) => <option key={item}>{item}</option>)}</select></label>
+                <label className="field full"><span>{t("fieldDescription")}</span><textarea required maxLength={5000} value={form.description} onChange={(e) => setField("description", e.target.value)} placeholder={t("fieldDescriptionPlaceholder")}/></label>
+                <label className="field"><span>{t("fieldHours")}</span><input type="number" min="0" step="0.5" value={form.hours} onChange={(e) => setField("hours", e.target.value)} placeholder={t("fieldHoursPlaceholder")}/></label>
+                <label className="field"><span>{t("fieldExperience")}</span><input type="number" min="0" value={form.experience} onChange={(e) => setField("experience", e.target.value)} placeholder={t("fieldExperiencePlaceholder")}/></label>
+                <label className="field"><span>{t("fieldPieces")}</span><input type="number" min="0" value={form.quantity} onChange={(e) => setField("quantity", e.target.value)}/></label>
+                <label className="field"><span>{t("fieldMinimum")}</span><input required type="number" min="1" value={form.minimum} onChange={(e) => setField("minimum", e.target.value)}/></label>
+                <label className="field"><span>{t("fieldLeadTime")}</span><input value={form.leadTime} onChange={(e) => setField("leadTime", e.target.value)} placeholder={t("fieldLeadTimePlaceholder")}/></label>
+                <label className="field"><span>{t("fieldCost")}</span><input type="number" min="0" value={form.cost} onChange={(e) => setField("cost", e.target.value)} placeholder={t("fieldCostPlaceholder")}/></label>
+                <label className="field"><span>Your selling price (₹)</span><input required type="number" min="1" value={form.price} onChange={(e) => setField("price", e.target.value)} placeholder="e.g. 1200"/></label>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: "14px", marginTop: "24px", flexWrap: "wrap" }}>
+                <button className="button" type="submit" disabled={saving || draftSaving} style={{ minWidth: "160px" }}>
+                  {saving ? t("publishingBtn") : "🚀 " + t("publishBtn")}
+                </button>
                 <button
                   type="button"
-                  onClick={discardDraft}
+                  className="button outline"
+                  onClick={saveDraft}
                   disabled={saving || draftSaving}
                   style={{
-                    background: "none",
-                    border: "none",
-                    color: "#888",
-                    cursor: "pointer",
-                    fontSize: "0.86rem",
-                    marginLeft: "auto",
-                    padding: "6px 10px",
-                    textDecoration: "underline",
+                    borderColor: "#13866c",
+                    color: "#13866c",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    minWidth: "150px",
                   }}
                 >
-                  Discard draft
+                  {draftSaving ? "Saving..." : "💾 Save as draft"}
                 </button>
-              )}
-            </div>
-          </section></div>
-          <FairPriceGuide range={suggestedRange} cost={form.cost} hours={form.hours} experience={form.experience} price={form.price} setPrice={(v) => setField("price", v)}/>
-        </form>
+                {hasDraft && (
+                  <button
+                    type="button"
+                    onClick={discardDraft}
+                    disabled={saving || draftSaving}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      color: "#888",
+                      cursor: "pointer",
+                      fontSize: "0.86rem",
+                      marginLeft: "auto",
+                      padding: "6px 10px",
+                      textDecoration: "underline",
+                    }}
+                  >
+                    Discard draft
+                  </button>
+                )}
+              </div>
+            </section></div>
+            <FairPriceGuide range={suggestedRange} cost={form.cost} hours={form.hours} experience={form.experience} price={form.price} setPrice={(v) => setField("price", v)}/>
+          </form>
+        )}
       </SignedIn>
     </main>}
 
@@ -881,6 +1272,37 @@ function MarketplaceInner() {
         }}
         onAddToCart={addToCart}
         onBuyNow={buyNow}
+        isOwner={Boolean(selectedProduct && userId && selectedProduct.seller_id === userId)}
+        onEdit={(p) => {
+          setEditingProduct(p as unknown as EditableProduct);
+          setSelectedProduct(null);
+        }}
+        onDelete={(id) => {
+          void handleDeleteProduct(id, selectedProduct?.name || "Product");
+          setSelectedProduct(null);
+        }}
+      />
+    )}
+
+    {/* ── Edit product modal ── */}
+    {editingProduct && (
+      <EditProductModal
+        product={editingProduct}
+        isOpen={Boolean(editingProduct)}
+        onClose={() => setEditingProduct(null)}
+        onSaved={async (updated) => {
+          flash(`✓ "${updated.name}" updated successfully!`);
+          await loadSellerProducts();
+          await loadProducts();
+          setEditingProduct(null);
+        }}
+        onDeleted={async () => {
+          flash("Product deleted.");
+          await loadSellerProducts();
+          await loadProducts();
+          setEditingProduct(null);
+        }}
+        api={api}
       />
     )}
 

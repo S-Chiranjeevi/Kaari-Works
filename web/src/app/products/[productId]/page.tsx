@@ -1,17 +1,34 @@
 "use client";
 
-import { useEffect, useState, use } from "react";
+import { useCallback, useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@clerk/nextjs";
 import ProductDetailModal, { type ProductDetail } from "@/components/ProductDetailModal";
+import EditProductModal, { type EditableProduct } from "@/components/EditProductModal";
 import CheckoutSidebar, { type CheckoutItem } from "@/components/CheckoutSidebar";
 import BuyerEstimateChat from "@/components/BuyerEstimateChat";
 import { LangProvider } from "@/lib/i18n";
 
 function ProductPageInner({ productId }: { productId: string }) {
   const router = useRouter();
+  const { userId, getToken } = useAuth();
   const [product, setProduct] = useState<ProductDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [checkoutItems, setCheckoutItems] = useState<CheckoutItem[] | null>(null);
+  const [editing, setEditing] = useState(false);
+
+  const api = useCallback(async (path: string, init: RequestInit = {}, authenticated = false) => {
+    const headers = new Headers(init.headers);
+    if (init.body) headers.set("Content-Type", "application/json");
+    if (authenticated) {
+      const token = await getToken();
+      if (token) headers.set("Authorization", `Bearer ${token}`);
+    }
+    const response = await fetch(path, { ...init, headers });
+    const body = response.status === 204 ? null : await response.json().catch(() => null);
+    if (!response.ok) throw new Error(body?.detail || "Something went wrong. Please try again.");
+    return body;
+  }, [getToken]);
 
   useEffect(() => {
     async function load() {
@@ -70,6 +87,16 @@ function ProductPageInner({ productId }: { productId: string }) {
     }
   }
 
+  async function handleDelete(id: number) {
+    if (!window.confirm("Are you sure you want to delete this product?")) return;
+    try {
+      await api(`/api/products/${id}`, { method: "DELETE" }, true);
+      router.push("/");
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Could not delete product.");
+    }
+  }
+
   if (loading) {
     return (
       <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", background: "#f7f9f7" }}>
@@ -80,6 +107,8 @@ function ProductPageInner({ productId }: { productId: string }) {
 
   if (!product) return null;
 
+  const isOwner = Boolean(userId && product.seller_id === userId);
+
   return (
     <>
       <ProductDetailModal
@@ -87,7 +116,23 @@ function ProductPageInner({ productId }: { productId: string }) {
         onClose={() => router.push("/")}
         onAddToCart={handleAddToCart}
         onBuyNow={handleBuyNow}
+        isOwner={isOwner}
+        onEdit={() => setEditing(true)}
+        onDelete={handleDelete}
       />
+      {editing && (
+        <EditProductModal
+          product={product}
+          isOpen={editing}
+          onClose={() => setEditing(false)}
+          onSaved={(updated) => {
+            setProduct(updated as ProductDetail);
+            setEditing(false);
+          }}
+          onDeleted={() => router.push("/")}
+          api={api}
+        />
+      )}
       {checkoutItems && (
         <CheckoutSidebar
           items={checkoutItems}

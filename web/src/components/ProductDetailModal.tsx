@@ -39,9 +39,20 @@ type Props = {
   onClose: () => void;
   onAddToCart: (productId: number, quantity: number) => Promise<void>;
   onBuyNow: (productId: number, quantity: number) => Promise<void>;
+  isOwner?: boolean;
+  onEdit?: (product: ProductDetail) => void;
+  onDelete?: (productId: number) => void;
 };
 
-export default function ProductDetailModal({ product, onClose, onAddToCart, onBuyNow }: Props) {
+export default function ProductDetailModal({
+  product,
+  onClose,
+  onAddToCart,
+  onBuyNow,
+  isOwner,
+  onEdit,
+  onDelete,
+}: Props) {
   const { t } = useLang();
   const [activeIdx, setActiveIdx] = useState(0);
   const [quantity, setQuantity] = useState(product.minimum_order_quantity || 1);
@@ -412,6 +423,72 @@ export default function ProductDetailModal({ product, onClose, onAddToCart, onBu
           {msg && (
             <div className={`pd-msg-banner ${msg.startsWith("✓") ? "pd-msg-banner--ok" : "pd-msg-banner--err"}`}>
               {msg}
+            </div>
+          )}
+
+          {/* Seller / Owner Controls */}
+          {isOwner && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "12px 16px",
+                background: "linear-gradient(135deg, #eef9f5, #f5faf8)",
+                borderRadius: "12px",
+                border: "1.5px solid #bfe0d6",
+                marginBottom: "16px",
+                flexWrap: "wrap",
+                gap: "10px",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <span style={{ fontSize: "1.1rem" }}>👑</span>
+                <span style={{ fontSize: "0.88rem", color: "#0d6654", fontWeight: 700 }}>
+                  You are the artisan of this listing
+                </span>
+              </div>
+              <div style={{ display: "flex", gap: "8px" }}>
+                {onEdit && (
+                  <button
+                    type="button"
+                    onClick={() => onEdit(product)}
+                    style={{
+                      padding: "6px 14px",
+                      borderRadius: "8px",
+                      border: "1.5px solid #13866c",
+                      background: "#ffffff",
+                      color: "#13866c",
+                      fontSize: "0.84rem",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "4px",
+                    }}
+                  >
+                    ✏️ Edit Listing
+                  </button>
+                )}
+                {onDelete && (
+                  <button
+                    type="button"
+                    onClick={() => onDelete(product.id)}
+                    style={{
+                      padding: "6px 12px",
+                      borderRadius: "8px",
+                      border: "1.5px solid #fecaca",
+                      background: "#ffffff",
+                      color: "#dc2626",
+                      fontSize: "0.84rem",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                    }}
+                  >
+                    🗑️ Delete
+                  </button>
+                )}
+              </div>
             </div>
           )}
 
