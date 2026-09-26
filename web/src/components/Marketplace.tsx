@@ -16,7 +16,8 @@ import { VoiceAction } from "@/lib/voiceCommands";
 type Product = {
   id: number; name: string; category: string; description: string; materials: string | null;
   seller_name: string | null; seller_id: string; price_inr: number;
-  minimum_order_quantity: number; quantity_available: number; lead_time: string | null; image_url: string | null;
+  minimum_order_quantity: number; quantity_available: number; lead_time: string | null;
+  image_url: string | null; images?: string[];
 };
 type Inquiry = {
   id: number; product_id: number; product_name: string; buyer_id: string; seller_id: string;
@@ -29,10 +30,15 @@ type Order = {
 };
 type ListingForm = {
   name: string; category: string; description: string; price: string; cost: string;
-  hours: string; experience: string; quantity: string; minimum: string; leadTime: string; image: string;
+  hours: string; experience: string; quantity: string; minimum: string; leadTime: string;
+  image: string; images: string[];
 };
 
-const blankForm: ListingForm = { name: "", category: "Textiles", description: "", price: "", cost: "", hours: "", experience: "", quantity: "20", minimum: "5", leadTime: "", image: "" };
+const blankForm: ListingForm = {
+  name: "", category: "Textiles", description: "", price: "", cost: "",
+  hours: "", experience: "", quantity: "20", minimum: "5", leadTime: "",
+  image: "", images: [],
+};
 
 const CATEGORY_ICONS = [
   { key: "catTextiles",  eng: "Textiles",           emoji: "🧵", bg: "#fde8e0" },
@@ -211,25 +217,92 @@ function MarketplaceInner() {
     try {
       const p = await api(`/api/products/${id}`);
       setSelectedProduct(p);
+      if (typeof window !== "undefined") {
+        window.history.pushState({ productId: id }, "", `/products/${id}`);
+      }
     } catch { flash("Could not load product details."); }
   }
 
-  // ── Listing form ──────────────────────────────────────────────────────────
-  function uploadImage(file?: File) {
-    if (!file) return;
-    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) return flash(t("noticeImageType"));
-    if (file.size > 1_000_000) return flash(t("noticeImageSize"));
-    const reader = new FileReader();
-    reader.onload = () => setField("image", String(reader.result));
-    reader.readAsDataURL(file);
+  // ── Multi-image Upload & Compression ──────────────────────────────────────
+  function compressPhoto(file: File): Promise<string> {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const maxDim = 1200;
+          let width = img.width;
+          let height = img.height;
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+          const canvas = document.createElement("canvas");
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          if (!ctx) return resolve(String(e.target?.result));
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL("image/jpeg", 0.84));
+        };
+        img.onerror = () => resolve(String(e.target?.result));
+        img.src = String(e.target?.result);
+      };
+      reader.onerror = () => resolve("");
+      reader.readAsDataURL(file);
+    });
   }
 
-  async function enhanceImage() {
-    if (!form.image) return flash(t("noticeNoImage"));
+  async function handleAddImages(files: FileList | File[]) {
+    const fileArray = Array.from(files);
+    const validFiles = fileArray.filter((f) =>
+      ["image/jpeg", "image/png", "image/webp"].includes(f.type)
+    );
+    if (validFiles.length === 0) return flash(t("noticeImageType"));
+
+    const newPhotos = await Promise.all(validFiles.map(compressPhoto));
+    const cleanPhotos = newPhotos.filter(Boolean);
+
+    setForm((prev) => {
+      const updated = [...prev.images, ...cleanPhotos];
+      return {
+        ...prev,
+        images: updated,
+        image: updated[0] || "",
+      };
+    });
+    flash(`Added ${cleanPhotos.length} photo${cleanPhotos.length > 1 ? "s" : ""}!`);
+  }
+
+  function handleRemoveImage(index: number) {
+    setForm((prev) => {
+      const updated = prev.images.filter((_, i) => i !== index);
+      return {
+        ...prev,
+        images: updated,
+        image: updated[0] || "",
+      };
+    });
+  }
+
+  async function enhanceImage(index = 0) {
+    const targetImg = form.images[index] || form.image;
+    if (!targetImg) return flash(t("noticeNoImage"));
     setEnhancing(true);
     try {
-      const result = await api("/api/ai/enhance-image", { method: "POST", body: JSON.stringify({ image: form.image }) }, true);
-      setField("image", result.image); flash(t("noticeEnhanced"));
+      const result = await api("/api/ai/enhance-image", { method: "POST", body: JSON.stringify({ image: targetImg }) }, true);
+      setForm((prev) => {
+        const updated = [...prev.images];
+        if (updated.length > 0) updated[index] = result.image;
+        else updated.push(result.image);
+        return { ...prev, images: updated, image: updated[0] || "" };
+      });
+      flash(t("noticeEnhanced"));
     } catch (error) { flash(error instanceof Error ? error.message : t("noticeEnhanceFail")); }
     finally { setEnhancing(false); }
   }
@@ -243,7 +316,9 @@ function MarketplaceInner() {
         hours_to_make: form.hours ? Number(form.hours) : null,
         craft_experience_years: form.experience ? Number(form.experience) : null,
         quantity_available: Number(form.quantity), minimum_order_quantity: Number(form.minimum),
-        lead_time: form.leadTime || null, image_url: form.image || null,
+        lead_time: form.leadTime || null,
+        image_url: form.images.length > 0 ? JSON.stringify(form.images) : (form.image || null),
+        images: form.images,
       }) }, true);
       setForm(blankForm); flash(t("noticePublished")); setTab("discover"); await loadProducts();
     } catch (error) { flash(error instanceof Error ? error.message : t("noticePublishFail")); }
@@ -468,7 +543,16 @@ function MarketplaceInner() {
       <SignedIn>
         <form className="listing-workspace" onSubmit={publishListing}>
           <div className="listing-form-main"><section className="form-card">
-            <ProductPhotoUpload image={form.image} enhancing={enhancing} onSelect={uploadImage} onEnhance={() => void enhanceImage()} onRemove={() => setField("image", "")}/>
+            <ProductPhotoUpload
+              images={form.images}
+              image={form.image}
+              enhancing={enhancing}
+              onAddImages={handleAddImages}
+              onRemoveImage={handleRemoveImage}
+              onSelect={(file) => file && handleAddImages([file])}
+              onEnhance={() => void enhanceImage(0)}
+              onRemove={() => setForm((prev) => ({ ...prev, images: [], image: "" }))}
+            />
             <div className="form-grid listing-details-grid">
               <label className="field"><span>{t("fieldName")}</span><input required minLength={2} maxLength={180} value={form.name} onChange={(e) => setField("name", e.target.value)} placeholder={t("fieldNamePlaceholder")}/></label>
               <label className="field"><span>{t("fieldCategory")}</span><select value={form.category} onChange={(e) => setField("category", e.target.value)}>{["Textiles","Pottery & ceramics","Woodwork","Jewellery","Home decor","Baskets","Paintings"].map((item) => <option key={item}>{item}</option>)}</select></label>
@@ -557,7 +641,12 @@ function MarketplaceInner() {
     {selectedProduct && (
       <ProductDetailModal
         product={selectedProduct}
-        onClose={() => setSelectedProduct(null)}
+        onClose={() => {
+          setSelectedProduct(null);
+          if (typeof window !== "undefined") {
+            window.history.pushState(null, "", "/");
+          }
+        }}
         onAddToCart={addToCart}
         onBuyNow={buyNow}
       />

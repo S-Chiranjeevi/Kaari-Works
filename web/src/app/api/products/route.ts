@@ -3,6 +3,25 @@ import { NextRequest, NextResponse } from "next/server";
 import { errorResponse, integer, serializeProduct, text } from "@/lib/http";
 import { prisma } from "@/lib/prisma";
 
+function resolveProductImages(productId: number, rawImageUrl: string | null): { images: string[]; imageUrl: string | null } {
+  if (!rawImageUrl) return { images: [], imageUrl: null };
+  if (rawImageUrl.startsWith("[")) {
+    try {
+      const parsed = JSON.parse(rawImageUrl);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        const images = parsed.map((img: string, i: number) =>
+          img.startsWith("data:image/") ? `/api/products/${productId}/image?index=${i}` : img
+        );
+        return { images, imageUrl: images[0] || null };
+      }
+    } catch {
+      // fall through
+    }
+  }
+  const single = rawImageUrl.startsWith("data:image/") ? `/api/products/${productId}/image` : rawImageUrl;
+  return { images: [single], imageUrl: single };
+}
+
 export async function GET(request: NextRequest) {
   const search = text(request.nextUrl.searchParams.get("q"), 100);
   const category = text(request.nextUrl.searchParams.get("category"), 100);
@@ -19,10 +38,15 @@ export async function GET(request: NextRequest) {
     include: { seller: { select: { displayName: true } } },
     orderBy: { createdAt: "desc" }, take: 100,
   });
-  return NextResponse.json(products.map((product) => ({
-    ...serializeProduct(product),
-    image_url: product.imageUrl?.startsWith("data:image/") ? `/api/products/${product.id}/image` : product.imageUrl,
-  })));
+
+  return NextResponse.json(products.map((product) => {
+    const { images, imageUrl } = resolveProductImages(product.id, product.imageUrl);
+    return {
+      ...serializeProduct(product),
+      images,
+      image_url: imageUrl,
+    };
+  }));
 }
 
 export async function POST(request: NextRequest) {
@@ -46,6 +70,14 @@ export async function POST(request: NextRequest) {
       create: { clerkUserId: userId, displayName, email, role: "seller" },
       update: { displayName, email, role: "seller" },
     });
+
+    let storedImageUrl: string | null = null;
+    if (Array.isArray(body.images) && body.images.length > 0) {
+      storedImageUrl = JSON.stringify(body.images.slice(0, 15));
+    } else if (typeof body.image_url === "string" && body.image_url.length <= 4_000_000) {
+      storedImageUrl = body.image_url;
+    }
+
     const product = await prisma.product.create({
       data: {
         sellerId: userId, name, category, description,
@@ -55,14 +87,17 @@ export async function POST(request: NextRequest) {
         craftExperienceYears: body.craft_experience_years == null ? null : integer(body.craft_experience_years, 0),
         quantityAvailable: integer(body.quantity_available, 1), minimumOrderQuantity,
         leadTime: text(body.lead_time, 120) || null,
-        imageUrl: typeof body.image_url === "string" && body.image_url.length <= 4_000_000 ? body.image_url : null,
+        imageUrl: storedImageUrl,
         status: body.status === "draft" ? "draft" : "published",
       },
       include: { seller: { select: { displayName: true } } },
     });
+
+    const { images, imageUrl } = resolveProductImages(product.id, product.imageUrl);
     return NextResponse.json({
       ...serializeProduct(product),
-      image_url: product.imageUrl?.startsWith("data:image/") ? `/api/products/${product.id}/image` : product.imageUrl,
+      images,
+      image_url: imageUrl,
     }, { status: 201 });
   } catch (error) {
     return errorResponse(error, "Unable to publish the product.");

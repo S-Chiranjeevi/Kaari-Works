@@ -2,6 +2,25 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { serializeProduct } from "@/lib/http";
 
+function resolveProductImages(productId: number, rawImageUrl: string | null): { images: string[]; imageUrl: string | null } {
+  if (!rawImageUrl) return { images: [], imageUrl: null };
+  if (rawImageUrl.startsWith("[")) {
+    try {
+      const parsed = JSON.parse(rawImageUrl);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        const images = parsed.map((img: string, i: number) =>
+          img.startsWith("data:image/") ? `/api/products/${productId}/image?index=${i}` : img
+        );
+        return { images, imageUrl: images[0] || null };
+      }
+    } catch {
+      // fall through
+    }
+  }
+  const single = rawImageUrl.startsWith("data:image/") ? `/api/products/${productId}/image` : rawImageUrl;
+  return { images: [single], imageUrl: single };
+}
+
 // GET /api/products/[productId] — single product detail
 export async function GET(
   _request: NextRequest,
@@ -17,10 +36,11 @@ export async function GET(
   });
   if (!product) return NextResponse.json({ detail: "Product not found." }, { status: 404 });
 
+  const { images, imageUrl } = resolveProductImages(product.id, product.imageUrl);
+
   return NextResponse.json({
     ...serializeProduct(product),
-    image_url: product.imageUrl?.startsWith("data:image/")
-      ? `/api/products/${product.id}/image`
-      : product.imageUrl,
+    images,
+    image_url: imageUrl,
   });
 }
